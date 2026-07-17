@@ -181,7 +181,22 @@ async function doSearch(q) {
 function setStart(p) {
   startPoint = p;
   if (startMarker) startMarker.remove();
-  startMarker = L.marker(p, { title: 'Départ' }).addTo(map).bindPopup('🚩 Départ');
+  startMarker = L.marker(p, { title: 'Départ' }).addTo(map);
+  const div = document.createElement('div');
+  div.className = 'ctx-popup';
+  div.innerHTML = '🚩 Départ manuel (prioritaire sur le GPS)';
+  const b = document.createElement('button');
+  b.textContent = '✖️ Supprimer, revenir à ma position';
+  b.onclick = clearStart;
+  div.appendChild(b);
+  startMarker.bindPopup(div);
+  if (destPoint) computeRoute();
+}
+function clearStart() {
+  startPoint = null;
+  if (startMarker) { startMarker.remove(); startMarker = null; }
+  map.closePopup();
+  toast('Départ : ma position 📍');
   if (destPoint) computeRoute();
 }
 function setDestination(p, label) {
@@ -225,7 +240,7 @@ function clearRoute() {
 }
 
 async function computeRoute() {
-  const start = userPos || startPoint;
+  const start = startPoint || userPos; // un départ posé manuellement prime sur le GPS
   if (!start) { toast('Position inconnue : appuyez sur 📍 ou faites un appui long sur la carte pour poser un départ 🚩'); return; }
   if (!destPoint) return;
   toast('Calcul de l’itinéraire… 👾', 8000);
@@ -341,8 +356,8 @@ async function generateRando() {
   const cands = invaders.filter(i => i.arr === arr && !flashed.has(i.id) && !isDead(i));
   if (!cands.length) { toast('Plus rien à flasher dans cet arrondissement 🎉'); return; }
 
-  // point de départ : ma position si elle est proche de l'arrondissement, sinon au cœur du groupe
-  let start = userPos || startPoint;
+  // point de départ : départ manuel, sinon ma position si proche de l'arrondissement, sinon le cœur du groupe
+  let start = startPoint || userPos;
   if (start && Math.min(...cands.map(c => haversine(start, c))) > 1500) start = null;
   if (!start) {
     start = cands.reduce((best, c) =>
@@ -377,8 +392,13 @@ async function generateRando() {
       .map((inv, k) => ({ inv, rank: order[k + 1] }))
       .sort((a, b) => a.rank - b.rank);
     clearRoute();
-    if (startMarker) startMarker.remove();
-    startMarker = L.marker(start, { title: 'Départ' }).addTo(map).bindPopup('🚩 Départ de la rando');
+    if (startPoint && start === startPoint) {
+      setStart(startPoint); // conserve le départ manuel et son bouton de suppression
+    } else {
+      startPoint = null; // départ auto (GPS ou cœur d'arrondissement) : on oublie l'éventuel départ manuel écarté
+      if (startMarker) startMarker.remove();
+      startMarker = L.marker(start, { title: 'Départ' }).addTo(map).bindPopup('🚩 Départ de la rando');
+    }
     drawRoute(null, trip, stops, `🥾 ${ordinalArr(arr)} —`);
   } catch (e) {
     toast('Erreur : ' + e.message, 5000);
