@@ -48,4 +48,12 @@ curl -sL "https://raw.githubusercontent.com/goguelnikov/SpaceInvaders/main/world
 
 ## Déploiement
 
-Site 100 % statique : n'importe quel hébergeur fait l'affaire (GitHub Pages, Netlify…). **HTTPS obligatoire** pour la géolocalisation et le service worker sur iPhone. Ensuite : Safari → Partager → « Sur l'écran d'accueil ».
+Hébergé sur GitHub Pages (branche `main`, racine) : https://benoitprat.github.io/invader-hunt/ — chaque push déploie. Sur iPhone : Safari → Partager → « Sur l'écran d'accueil ».
+
+**Avant chaque commit à déployer, lancer :**
+
+```bash
+python3 tools/bump_build.py
+```
+
+Ce script stampe un numéro de build (`AAAA-MM-JJ.HHMM`) dans `version.js` (affiché dans ⚙️ Réglages) et dans le nom de cache de `sw.js`. Sans ce bump, les PWA installées continuent de servir l'ancienne version depuis leur cache. Côté iPhone, la mise à jour arrive au 2ᵉ lancement après le déploiement ; le numéro de build dans ⚙️ permet de vérifier quelle version tourne.

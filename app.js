@@ -450,6 +450,7 @@ async function init() {
   $('btn-settings').onclick = () => {
     $('layers-panel').hidden = true; $('rando-panel').hidden = true;
     $('uid-input').value = getUid();
+    $('build-info').textContent = 'Build ' + (typeof BUILD !== 'undefined' ? BUILD : 'inconnu');
     $('settings-panel').hidden = !$('settings-panel').hidden;
   };
   $('btn-close-settings').onclick = () => { $('settings-panel').hidden = true; };
