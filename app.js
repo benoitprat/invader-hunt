@@ -32,6 +32,11 @@ function projOnSegment(p, a, b) {
   const qx = a[0] + t * dx, qy = a[1] + t * dy;
   return { d: Math.hypot(p[0] - qx, p[1] - qy), t };
 }
+function haversine(a, b) {
+  const dLat = (b.lat - a.lat) * RAD, dLng = (b.lng - a.lng) * RAD;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * RAD) * Math.cos(b.lat * RAD) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
 // pour un point : distance mini à la polyligne + position le long de celle-ci
 function distToLine(p, xy, cum) {
   let best = { d: Infinity, along: 0 };
@@ -200,6 +205,17 @@ async function osrmRoute(points) {
   return data.routes[0];
 }
 
+// tournée optimisée (TSP) : renvoie {trip, order} où order[i] = rang de visite du i-e point d'entrée
+async function osrmTrip(points, roundtrip) {
+  const base = OSRM.replace('/route/', '/trip/');
+  const coords = points.map(p => p.lng.toFixed(6) + ',' + p.lat.toFixed(6)).join(';');
+  const res = await fetch(`${base}${coords}?roundtrip=${roundtrip}&source=first${roundtrip ? '' : '&destination=last'}&overview=full&geometries=geojson&steps=false`);
+  if (!res.ok) throw new Error('Routage : HTTP ' + res.status);
+  const data = await res.json();
+  if (data.code !== 'Ok' || !data.trips.length) throw new Error('Pas de tournée trouvée');
+  return { trip: data.trips[0], order: data.waypoints.map(w => w.waypoint_index) };
+}
+
 function clearRoute() {
   for (const l of [directLine, routeLine, routeStopsLayer]) if (l) l.remove();
   directLine = routeLine = routeStopsLayer = null;
@@ -243,17 +259,20 @@ async function computeRoute() {
       stops = candidates;
     }
 
-    drawRoute(direct, route, stops, ref, xy, cum);
+    drawRoute(direct, route, stops, '👾');
   } catch (e) {
     toast('Erreur : ' + e.message, 5000);
   }
 }
 
-function drawRoute(direct, route, stops, ref, dxy, dcum) {
+function drawRoute(direct, route, stops, emoji) {
   for (const l of [directLine, routeLine, routeStopsLayer]) if (l) l.remove();
-  const directCoords = direct.geometry.coordinates.map(c => [c[1], c[0]]);
+  directLine = null;
+  if (direct) {
+    const directCoords = direct.geometry.coordinates.map(c => [c[1], c[0]]);
+    directLine = L.polyline(directCoords, { color: '#6b7280', weight: 3, dashArray: '6 8', opacity: .7 }).addTo(map);
+  }
   const routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-  directLine = L.polyline(directCoords, { color: '#6b7280', weight: 3, dashArray: '6 8', opacity: .7 }).addTo(map);
   routeLine = L.polyline(routeCoords, { color: '#7c3aed', weight: 5, opacity: .85 }).addTo(map);
   routeStopsLayer = L.layerGroup().addTo(map);
   stops.forEach((s, i) => {
@@ -267,12 +286,14 @@ function drawRoute(direct, route, stops, ref, dxy, dcum) {
   map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
 
   const pts = stops.reduce((s, c) => s + c.inv.pts, 0);
-  const extraD = route.distance - direct.distance;
-  const extraT = route.duration - direct.duration;
+  let line2 = `🚶 ${fmtDist(route.distance)} · ${fmtDur(route.duration)}`;
+  if (direct) {
+    const extraD = route.distance - direct.distance;
+    const extraT = route.duration - direct.duration;
+    line2 += ` <span class="muted">(direct : ${fmtDist(direct.distance)}, +${fmtDist(Math.max(0, extraD))} / +${fmtDur(Math.max(0, extraT))})</span>`;
+  }
   $('route-summary').innerHTML =
-    `👾 <b>${stops.length} invader${stops.length > 1 ? 's' : ''}</b> à flasher · <b>${pts} pts</b><br>` +
-    `🚶 ${fmtDist(route.distance)} · ${fmtDur(route.duration)} ` +
-    `<span class="muted">(direct : ${fmtDist(direct.distance)}, +${fmtDist(Math.max(0, extraD))} / +${fmtDur(Math.max(0, extraT))})</span>`;
+    `${emoji} <b>${stops.length} invader${stops.length > 1 ? 's' : ''}</b> à flasher · <b>${pts} pts</b><br>` + line2;
   const list = $('route-list');
   list.innerHTML = '';
   stops.forEach((s, i) => {
@@ -285,6 +306,81 @@ function drawRoute(direct, route, stops, ref, dxy, dcum) {
   });
   $('route-panel').hidden = false;
   if (!stops.length) toast('Aucun nouvel invader à moins de 200 m du chemin 😢', 4000);
+}
+
+// ---------- randos par arrondissement ----------
+const WALK_FACTOR = 1.35; // rapport moyen distance à pied / vol d'oiseau
+
+function ordinalArr(n) { return n === 1 ? '1er' : n + 'e'; }
+
+function populateRandoArr() {
+  const counts = {};
+  for (const inv of invaders) {
+    if (inv.arr && !flashed.has(inv.id) && !isDead(inv)) counts[inv.arr] = (counts[inv.arr] || 0) + 1;
+  }
+  const sel = $('rando-arr');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  for (let a = 1; a <= 20; a++) {
+    const opt = document.createElement('option');
+    opt.value = a;
+    const n = counts[a] || 0;
+    opt.textContent = `${ordinalArr(a)} arrondissement — ${n} à flasher`;
+    opt.disabled = n === 0;
+    sel.appendChild(opt);
+  }
+  if (prev) sel.value = prev;
+}
+
+async function generateRando() {
+  const arr = +$('rando-arr').value;
+  const budget = +$('rando-dist').value * 1000;
+  const loop = document.querySelector('input[name="rando-type"]:checked').value === 'loop';
+  const cands = invaders.filter(i => i.arr === arr && !flashed.has(i.id) && !isDead(i));
+  if (!cands.length) { toast('Plus rien à flasher dans cet arrondissement 🎉'); return; }
+
+  // point de départ : ma position si elle est proche de l'arrondissement, sinon au cœur du groupe
+  let start = userPos || startPoint;
+  if (start && Math.min(...cands.map(c => haversine(start, c))) > 1500) start = null;
+  if (!start) {
+    start = cands.reduce((best, c) =>
+      cands.reduce((s, o) => s + haversine(c, o), 0) < cands.reduce((s, o) => s + haversine(best, o), 0) ? c : best);
+    start = { lat: start.lat, lng: start.lng };
+    toast('Départ posé au cœur de l’arrondissement (vous êtes loin) 🚩', 4000);
+  }
+
+  // chaîne au plus proche voisin sous contrainte de distance estimée
+  const chain = [];
+  const remaining = [...cands];
+  let cur = start, est = 0;
+  while (remaining.length && chain.length < MAX_WAYPOINTS) {
+    let bi = 0, bd = Infinity;
+    remaining.forEach((c, i) => { const d = haversine(cur, c); if (d < bd) { bd = d; bi = i; } });
+    const next = remaining[bi];
+    const backHome = loop ? haversine(next, start) * WALK_FACTOR : 0;
+    if (est + bd * WALK_FACTOR + backHome > budget && chain.length >= 2) break;
+    est += bd * WALK_FACTOR;
+    chain.push(next);
+    remaining.splice(bi, 1);
+    cur = next;
+  }
+  if (!chain.length) { toast('Aucun invader atteignable dans cette distance'); return; }
+
+  $('rando-panel').hidden = true;
+  toast('Calcul de la rando… 🥾', 8000);
+  try {
+    const { trip, order } = await osrmTrip([start, ...chain], loop);
+    // order[k] = rang de visite du k-e point envoyé (0 = départ) → on réordonne les étapes
+    const stops = chain
+      .map((inv, k) => ({ inv, rank: order[k + 1] }))
+      .sort((a, b) => a.rank - b.rank);
+    clearRoute();
+    if (startMarker) startMarker.remove();
+    startMarker = L.marker(start, { title: 'Départ' }).addTo(map).bindPopup('🚩 Départ de la rando');
+    drawRoute(null, trip, stops, `🥾 ${ordinalArr(arr)} —`);
+  } catch (e) {
+    toast('Erreur : ' + e.message, 5000);
+  }
 }
 
 // ---------- init ----------
@@ -335,11 +431,22 @@ async function init() {
     if (userPos) { map.setView(userPos, 16); firstFix = false; }
     startGeoloc();
   };
-  $('btn-layers').onclick = () => { $('layers-panel').hidden = !$('layers-panel').hidden; };
+  $('btn-layers').onclick = () => {
+    $('rando-panel').hidden = true; $('settings-panel').hidden = true;
+    $('layers-panel').hidden = !$('layers-panel').hidden;
+  };
+  $('btn-rando').onclick = () => {
+    $('layers-panel').hidden = true; $('settings-panel').hidden = true;
+    populateRandoArr();
+    $('rando-panel').hidden = !$('rando-panel').hidden;
+  };
+  $('btn-rando-close').onclick = () => { $('rando-panel').hidden = true; };
+  $('btn-rando-go').onclick = generateRando;
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
   $('chk-dead').onchange = e => e.target.checked ? layerDead.addTo(map) : layerDead.remove();
 
   $('btn-settings').onclick = () => {
+    $('layers-panel').hidden = true; $('rando-panel').hidden = true;
     $('uid-input').value = getUid();
     $('settings-panel').hidden = !$('settings-panel').hidden;
   };
@@ -369,7 +476,7 @@ async function init() {
   $('btn-clear-route').onclick = clearRoute;
 
   // service worker (PWA hors-ligne)
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Randos par arrondissement + carte hors ligne \\(cache de tuiles\\) *)",
+      "Bash(git push *)"
+    ]
+  }
+}

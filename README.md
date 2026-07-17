@@ -15,7 +15,15 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 - 📍 : se géolocaliser (nécessite HTTPS sur iPhone).
 - Champ de recherche : taper une adresse → l'itinéraire optimisé se calcule depuis la position courante.
 - Appui long (mobile) / clic droit (desktop) sur la carte : poser un départ 🚩 ou une destination 🎯 manuellement.
+- 🥾 : générer une **rando par arrondissement** — choix de l'arrondissement (avec compteur d'invaders restants), distance visée (3 à 12 km), boucle ou traverse. La tournée est optimisée par OSRM (service `trip`) ; le départ est votre position si elle est proche, sinon le cœur de l'arrondissement.
+- 📷 : chaque invader (popup et liste d'étapes) pointe vers la recherche Instagram `#PA_<n°>` pour voir des visuels de la mosaïque.
 - 👾 : afficher/masquer les flashés et les détruits.
+
+## Hors ligne
+
+Le service worker met en cache l'app, la base des invaders et les **tuiles de carte déjà consultées** (max ~2500 tuiles, les plus anciennes sont purgées). Préparez votre balade en wifi : la zone parcourue à l'écran restera disponible hors ligne. Le calcul d'itinéraire et le géocodage nécessitent en revanche du réseau.
+
+L'attribution des arrondissements est précalculée par `tools/add_arrondissements.py` (polygones officiels opendata.paris.fr, champ `arr` dans `data/invaders.json`).
 
 ## Développement local
 

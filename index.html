@@ -24,7 +24,31 @@
 
 <div id="fabs">
   <button id="btn-locate" title="Ma position">📍</button>
+  <button id="btn-rando" title="Rando invaders">🥾</button>
   <button id="btn-layers" title="Affichage">👾</button>
+</div>
+
+<div id="rando-panel" hidden>
+  <h3>🥾 Rando invaders</h3>
+  <label>Arrondissement
+    <select id="rando-arr"></select>
+  </label>
+  <label>Distance visée
+    <select id="rando-dist">
+      <option value="3">3 km</option>
+      <option value="5" selected>5 km</option>
+      <option value="8">8 km</option>
+      <option value="12">12 km</option>
+    </select>
+  </label>
+  <div class="radio-row">
+    <label><input type="radio" name="rando-type" value="loop" checked> 🔄 Boucle</label>
+    <label><input type="radio" name="rando-type" value="line"> ➡️ Traverse</label>
+  </div>
+  <div class="row">
+    <button id="btn-rando-go">Générer</button>
+    <button id="btn-rando-close">Fermer</button>
+  </div>
 </div>
 
 <div id="layers-panel" hidden>
