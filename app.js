@@ -140,7 +140,7 @@ function buildMarkers() {
       .bindPopup(() => invaderPopup(inv))
       .addTo(layer);
   }
-  layerUnflashed.addTo(map);
+  if ($('chk-unflashed').checked) layerUnflashed.addTo(map);
   if ($('chk-flashed').checked) layerFlashedGrp.addTo(map);
   if ($('chk-destroyed').checked) layerDestroyed.addTo(map);
   if ($('chk-hidden').checked) layerHidden.addTo(map);
@@ -504,6 +504,7 @@ async function init() {
     $('rando-arr-wrap').hidden = rad;
     $('rando-radius-wrap').hidden = !rad;
   });
+  $('chk-unflashed').onchange = e => e.target.checked ? layerUnflashed.addTo(map) : layerUnflashed.remove();
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
   $('chk-destroyed').onchange = e => e.target.checked ? layerDestroyed.addTo(map) : layerDestroyed.remove();
   $('chk-hidden').onchange = e => e.target.checked ? layerHidden.addTo(map) : layerHidden.remove();
@@ -512,6 +513,8 @@ async function init() {
     $('layers-panel').hidden = true; $('rando-panel').hidden = true;
     $('uid-input').value = getUid();
     $('build-info').textContent = 'Build ' + (typeof BUILD !== 'undefined' ? BUILD : 'inconnu');
+    const paMax = invaders.reduce((m, i) => i.city === 'PA' ? Math.max(m, +i.id.split('_')[1] || 0) : m, 0);
+    $('db-info').textContent = `Base : ${invaders.length} invaders, jusqu'à PA_${paMax}`;
     $('settings-panel').hidden = !$('settings-panel').hidden;
   };
   $('btn-close-settings').onclick = () => { $('settings-panel').hidden = true; };
