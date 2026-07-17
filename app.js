@@ -93,7 +93,13 @@ const canvasRenderer = () => L.canvas({ padding: 0.4 });
 function isDead(inv) { return DEAD_STATUSES.has(inv.status); }
 function isDamaged(inv) { return inv.status.includes('damaged'); }
 
-function instaUrl(id) { return 'https://www.instagram.com/explore/tags/' + id.toLowerCase() + '/'; }
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+// sur iOS le schéma instagram:// lance directement l'app sur le hashtag ; ailleurs, page web
+function instaUrl(id) {
+  const tag = id.toLowerCase();
+  return IS_IOS ? 'instagram://tag?name=' + tag
+                : 'https://www.instagram.com/explore/tags/' + tag + '/';
+}
 
 function invaderPopup(inv) {
   const state = flashed.has(inv.id) ? '✅ déjà flashé' : '🎯 à flasher';
