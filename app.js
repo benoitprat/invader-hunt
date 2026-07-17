@@ -13,7 +13,7 @@ let map, invaders = [], flashed = new Set(), playerName = '';
 let userPos = null, startPoint = null, destPoint = null;
 let userMarker = null, accCircle = null, startMarker = null, destMarker = null;
 let directLine = null, routeLine = null, routeStopsLayer = null, randoCircle = null;
-let layerUnflashed, layerFlashedGrp, layerDead;
+let layerUnflashed, layerFlashedGrp, layerDestroyed, layerHidden;
 let watchId = null, firstFix = true;
 
 const $ = id => document.getElementById(id);
@@ -111,17 +111,21 @@ function invaderPopup(inv) {
 }
 
 function buildMarkers() {
-  if (layerUnflashed) { layerUnflashed.remove(); layerFlashedGrp.remove(); layerDead.remove(); }
+  if (layerUnflashed) { layerUnflashed.remove(); layerFlashedGrp.remove(); layerDestroyed.remove(); layerHidden.remove(); }
   layerUnflashed = L.layerGroup();
   layerFlashedGrp = L.layerGroup();
-  layerDead = L.layerGroup();
+  layerDestroyed = L.layerGroup();
+  layerHidden = L.layerGroup();
   const rend = canvasRenderer();
   for (const inv of invaders) {
     const isFl = flashed.has(inv.id);
     let opts, layer;
-    if (isDead(inv)) {
+    if (inv.status === 'hidden') {
+      opts = { radius: 5, color: '#000000', fillColor: '#1f2937', fillOpacity: .75, weight: 1.5 };
+      layer = layerHidden;
+    } else if (isDead(inv)) {
       opts = { radius: 4, color: '#b91c1c', fillColor: '#ef4444', fillOpacity: .5, weight: 1 };
-      layer = layerDead;
+      layer = layerDestroyed;
     } else if (isFl) {
       opts = { radius: 4, color: '#6b7280', fillColor: '#9ca3af', fillOpacity: .6, weight: 1 };
       layer = layerFlashedGrp;
@@ -138,7 +142,8 @@ function buildMarkers() {
   }
   layerUnflashed.addTo(map);
   if ($('chk-flashed').checked) layerFlashedGrp.addTo(map);
-  if ($('chk-dead').checked) layerDead.addTo(map);
+  if ($('chk-destroyed').checked) layerDestroyed.addTo(map);
+  if ($('chk-hidden').checked) layerHidden.addTo(map);
 }
 
 // ---------- géolocalisation ----------
@@ -500,7 +505,8 @@ async function init() {
     $('rando-radius-wrap').hidden = !rad;
   });
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
-  $('chk-dead').onchange = e => e.target.checked ? layerDead.addTo(map) : layerDead.remove();
+  $('chk-destroyed').onchange = e => e.target.checked ? layerDestroyed.addTo(map) : layerDestroyed.remove();
+  $('chk-hidden').onchange = e => e.target.checked ? layerHidden.addTo(map) : layerHidden.remove();
 
   $('btn-settings').onclick = () => {
     $('layers-panel').hidden = true; $('rando-panel').hidden = true;
