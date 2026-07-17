@@ -30,8 +30,20 @@
 
 <div id="rando-panel" hidden>
   <h3>🥾 Rando invaders</h3>
-  <label>Arrondissement
+  <div class="radio-row zone-row">
+    <label><input type="radio" name="rando-zone" value="arr" checked> 🏙️ Arrondissement</label>
+    <label><input type="radio" name="rando-zone" value="radius"> ⭕ Autour d'un point</label>
+  </div>
+  <label id="rando-arr-wrap">Arrondissement
     <select id="rando-arr"></select>
+  </label>
+  <label id="rando-radius-wrap" hidden>Rayon autour du point (🚩 départ manuel, sinon ma position, sinon le centre de la carte)
+    <select id="rando-radius">
+      <option value="250">250 m</option>
+      <option value="500" selected>500 m</option>
+      <option value="1000">1 km</option>
+      <option value="2000">2 km</option>
+    </select>
   </label>
   <label>Distance visée
     <select id="rando-dist">

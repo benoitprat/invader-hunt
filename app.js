@@ -12,7 +12,7 @@ const DEAD_STATUSES = new Set(['destroyed', 'hidden']);
 let map, invaders = [], flashed = new Set(), playerName = '';
 let userPos = null, startPoint = null, destPoint = null;
 let userMarker = null, accCircle = null, startMarker = null, destMarker = null;
-let directLine = null, routeLine = null, routeStopsLayer = null;
+let directLine = null, routeLine = null, routeStopsLayer = null, randoCircle = null;
 let layerUnflashed, layerFlashedGrp, layerDead;
 let watchId = null, firstFix = true;
 
@@ -232,8 +232,8 @@ async function osrmTrip(points, roundtrip) {
 }
 
 function clearRoute() {
-  for (const l of [directLine, routeLine, routeStopsLayer]) if (l) l.remove();
-  directLine = routeLine = routeStopsLayer = null;
+  for (const l of [directLine, routeLine, routeStopsLayer, randoCircle]) if (l) l.remove();
+  directLine = routeLine = routeStopsLayer = randoCircle = null;
   if (destMarker) { destMarker.remove(); destMarker = null; }
   destPoint = null;
   $('route-panel').hidden = true;
@@ -350,20 +350,39 @@ function populateRandoArr() {
 }
 
 async function generateRando() {
-  const arr = +$('rando-arr').value;
   const budget = +$('rando-dist').value * 1000;
   const loop = document.querySelector('input[name="rando-type"]:checked').value === 'loop';
-  const cands = invaders.filter(i => i.arr === arr && !flashed.has(i.id) && !isDead(i));
-  if (!cands.length) { toast('Plus rien à flasher dans cet arrondissement 🎉'); return; }
+  const zoneRadius = document.querySelector('input[name="rando-zone"]:checked').value === 'radius';
+  let cands, start, title, circle = null;
 
-  // point de départ : départ manuel, sinon ma position si proche de l'arrondissement, sinon le cœur du groupe
-  let start = startPoint || userPos;
-  if (start && Math.min(...cands.map(c => haversine(start, c))) > 1500) start = null;
-  if (!start) {
-    start = cands.reduce((best, c) =>
-      cands.reduce((s, o) => s + haversine(c, o), 0) < cands.reduce((s, o) => s + haversine(best, o), 0) ? c : best);
-    start = { lat: start.lat, lng: start.lng };
-    toast('Départ posé au cœur de l’arrondissement (vous êtes loin) 🚩', 4000);
+  if (zoneRadius) {
+    // zone circulaire : centre = départ manuel > ma position > centre de la carte
+    const radius = +$('rando-radius').value;
+    let center, centerLabel;
+    if (startPoint) { center = startPoint; centerLabel = 'départ manuel 🚩'; }
+    else if (userPos) { center = userPos; centerLabel = 'ma position 📍'; }
+    else { const c = map.getCenter(); center = { lat: c.lat, lng: c.lng }; centerLabel = 'centre de la carte'; }
+    cands = invaders.filter(i => !flashed.has(i.id) && !isDead(i) && haversine(center, i) <= radius);
+    if (!cands.length) { toast(`Aucun invader à flasher dans un rayon de ${fmtDist(radius)} 😢`); return; }
+    start = center;
+    circle = { center, radius };
+    title = `🥾 rayon ${fmtDist(radius)} —`;
+    toast(`Zone : ${fmtDist(radius)} autour du ${centerLabel}`, 3000);
+  } else {
+    const arr = +$('rando-arr').value;
+    cands = invaders.filter(i => i.arr === arr && !flashed.has(i.id) && !isDead(i));
+    if (!cands.length) { toast('Plus rien à flasher dans cet arrondissement 🎉'); return; }
+
+    // point de départ : départ manuel, sinon ma position si proche de l'arrondissement, sinon le cœur du groupe
+    start = startPoint || userPos;
+    if (start && Math.min(...cands.map(c => haversine(start, c))) > 1500) start = null;
+    if (!start) {
+      start = cands.reduce((best, c) =>
+        cands.reduce((s, o) => s + haversine(c, o), 0) < cands.reduce((s, o) => s + haversine(best, o), 0) ? c : best);
+      start = { lat: start.lat, lng: start.lng };
+      toast('Départ posé au cœur de l’arrondissement (vous êtes loin) 🚩', 4000);
+    }
+    title = `🥾 ${ordinalArr(arr)} —`;
   }
 
   // chaîne au plus proche voisin sous contrainte de distance estimée
@@ -399,7 +418,12 @@ async function generateRando() {
       if (startMarker) startMarker.remove();
       startMarker = L.marker(start, { title: 'Départ' }).addTo(map).bindPopup('🚩 Départ de la rando');
     }
-    drawRoute(null, trip, stops, `🥾 ${ordinalArr(arr)} —`);
+    if (circle) {
+      randoCircle = L.circle(circle.center, {
+        radius: circle.radius, color: '#7c3aed', weight: 2, dashArray: '4 6', fillColor: '#8b5cf6', fillOpacity: .06
+      }).addTo(map);
+    }
+    drawRoute(null, trip, stops, title);
   } catch (e) {
     toast('Erreur : ' + e.message, 5000);
   }
@@ -464,6 +488,11 @@ async function init() {
   };
   $('btn-rando-close').onclick = () => { $('rando-panel').hidden = true; };
   $('btn-rando-go').onclick = generateRando;
+  document.querySelectorAll('input[name="rando-zone"]').forEach(r => r.onchange = () => {
+    const rad = document.querySelector('input[name="rando-zone"]:checked').value === 'radius';
+    $('rando-arr-wrap').hidden = rad;
+    $('rando-radius-wrap').hidden = !rad;
+  });
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
   $('chk-dead').onchange = e => e.target.checked ? layerDead.addTo(map) : layerDead.remove();
 

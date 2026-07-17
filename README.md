@@ -15,7 +15,7 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 - 📍 : se géolocaliser (nécessite HTTPS sur iPhone).
 - Champ de recherche : taper une adresse → l'itinéraire optimisé se calcule depuis la position courante.
 - Appui long (mobile) / clic droit (desktop) sur la carte : poser un départ 🚩 ou une destination 🎯 manuellement.
-- 🥾 : générer une **rando par arrondissement** — choix de l'arrondissement (avec compteur d'invaders restants), distance visée (3 à 12 km), boucle ou traverse. La tournée est optimisée par OSRM (service `trip`) ; le départ est votre position si elle est proche, sinon le cœur de l'arrondissement.
+- 🥾 : générer une **rando** — deux types de zone : par **arrondissement** (avec compteur d'invaders restants) ou **autour d'un point** (rayon de 250 m à 2 km ; centre = départ manuel 🚩, sinon ma position, sinon le centre de la carte, cercle affiché sur la carte). Dans les deux cas : distance visée (3 à 12 km), boucle ou traverse, tournée optimisée par OSRM (service `trip`).
 - 📷 : chaque invader (popup et liste d'étapes) pointe vers la recherche Instagram `#PA_<n°>` pour voir des visuels de la mosaïque.
 - 👾 : afficher/masquer les flashés et les détruits.
 
