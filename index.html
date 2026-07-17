@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Invader Hunt</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Invaders">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<div id="topbar">
+  <input id="search" type="search" placeholder="🎯 Aller à… (adresse, lieu)" autocomplete="off">
+  <button id="btn-settings" title="Réglages">⚙️</button>
+</div>
+<div id="search-results" hidden></div>
+
+<div id="fabs">
+  <button id="btn-locate" title="Ma position">📍</button>
+  <button id="btn-layers" title="Affichage">👾</button>
+</div>
+
+<div id="layers-panel" hidden>
+  <label><input type="checkbox" id="chk-flashed" checked> Déjà flashés (gris)</label>
+  <label><input type="checkbox" id="chk-dead"> Détruits / cachés</label>
+</div>
+
+<div id="settings-panel" hidden>
+  <h3>Réglages</h3>
+  <label>UID FlashInvaders
+    <input id="uid-input" type="text" spellcheck="false">
+  </label>
+  <div class="row">
+    <button id="btn-refresh-flash">🔄 Recharger mes flashs</button>
+    <button id="btn-close-settings">Fermer</button>
+  </div>
+  <p id="flash-status" class="muted"></p>
+</div>
+
+<div id="route-panel" hidden>
+  <div id="route-summary"></div>
+  <div id="route-list"></div>
+  <div class="row">
+    <button id="btn-clear-route">✖️ Effacer</button>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
