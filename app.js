@@ -304,6 +304,8 @@ function drawRoute(direct, route, stops, emoji) {
     div.querySelector('.ig-link').onclick = e => e.stopPropagation();
     list.appendChild(div);
   });
+  $('route-panel').classList.remove('min');
+  $('btn-route-min').textContent = '▾';
   $('route-panel').hidden = false;
   if (!stops.length) toast('Aucun nouvel invader à moins de 200 m du chemin 😢', 4000);
 }
@@ -474,6 +476,10 @@ async function init() {
   });
 
   $('btn-clear-route').onclick = clearRoute;
+  $('btn-route-min').onclick = () => {
+    const min = $('route-panel').classList.toggle('min');
+    $('btn-route-min').textContent = min ? '▴' : '▾';
+  };
 
   // service worker (PWA hors-ligne)
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
