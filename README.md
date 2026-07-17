@@ -5,7 +5,7 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 ## Fonctionnement
 
 - **Mes flashs** : récupérés en direct depuis l'API FlashInvaders (`api/gallery?uid=…`), mis en cache 6 h dans le navigateur. UID modifiable dans ⚙️ Réglages.
-- **Localisation des mosaïques** : dataset communautaire [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders) (4142 invaders géolocalisés avec statut), nettoyé dans `data/invaders.json`.
+- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (4335 invaders géolocalisés, statuts à jour dont les réactivations), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
 - **Carte** : Leaflet + tuiles OpenStreetMap. Violet = à flasher, orange = à flasher mais endommagé, gris = déjà flashé, rouge = détruit/caché (masqués par défaut, et jamais proposés dans les itinéraires).
 - **Itinéraires** : OSRM piéton (instance FOSSGIS `routing.openstreetmap.de`). L'app calcule le trajet direct, cherche les invaders non flashés dans un corridor de 200 m, les ordonne le long du trajet et recalcule l'itinéraire en passant par eux (max 60 étapes ; au-delà, priorité aux plus proches du chemin).
 - **Adresses** : géocodage Nominatim (OpenStreetMap).
@@ -33,17 +33,17 @@ node serve.js   # http://127.0.0.1:8788
 
 ## Mise à jour des données
 
-Quand le dataset publie une nouvelle version (V06…) :
-
 ```bash
-curl -sL "https://raw.githubusercontent.com/goguelnikov/SpaceInvaders/main/world_space_invaders_V06.json" -o data/world_space_invaders_V06.json
-# puis relancer le script de nettoyage (voir git log / demander à Claude)
+python3 tools/import_mapinvaders.py    # re-télécharge les sources MapInvaders
+python3 tools/add_arrondissements.py   # réattribue les arrondissements
+python3 tools/bump_build.py            # nouveau build
+git commit -am "maj données" && git push
 ```
 
 ## Limites connues
 
-- Le dataset V05 s'arrête à `PA_1528` : les invaders posés récemment (PA_1529+) n'apparaissent pas.
-- Orléans (ORLN) absent du dataset.
+- `SPACE2ISS` (l'invader de la Station spatiale internationale) n'est pas sur la carte.
+- Les invaders trop récents pour MapInvaders n'apparaissent qu'après leur prochaine mise à jour (relancer l'import).
 - La contrainte des 200 m s'applique aux invaders choisis comme étapes ; le chemin entre deux étapes suit les rues et peut très ponctuellement déborder du corridor.
 
 ## Déploiement
