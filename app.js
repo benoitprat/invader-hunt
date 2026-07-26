@@ -1,6 +1,5 @@
 'use strict';
 
-const DEFAULT_UID = 'UID_RETIRE';
 const GALLERY_API = 'https://api.space-invaders.com/flashinvaders_v3_pas_trop_predictif/api/gallery?uid=';
 const OSRM = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/';
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
@@ -63,10 +62,11 @@ function fmtDur(s) {
 }
 
 // ---------- flashs du joueur ----------
-function getUid() { return localStorage.getItem('uid') || DEFAULT_UID; }
+function getUid() { return localStorage.getItem('uid') || ''; }
 
 async function loadFlashed(force = false) {
   const uid = getUid();
+  if (!uid) { flashed = new Set(); playerName = ''; throw new Error('UID non renseigné'); }
   const cacheKey = 'flash_' + uid;
   const cached = localStorage.getItem(cacheKey);
   if (!force && cached) {
@@ -512,7 +512,14 @@ async function init() {
     $('flash-status').textContent = `${playerName ? playerName + ' · ' : ''}${nb} invaders flashés`;
     toast(`${playerName ? playerName + ' — ' : ''}${nb} flashés chargés 👾`, 2500);
   } catch (e) {
-    toast('Flashs non chargés (' + e.message + ') — tous les invaders seront proposés', 5000);
+    if (!getUid()) {
+      toast('⚙️ Renseignez votre UID FlashInvaders pour voir vos flashs', 6000);
+      $('uid-input').value = '';
+      $('flash-status').textContent = 'Aucun UID renseigné — tous les invaders sont affichés comme à flasher.';
+      $('settings-panel').hidden = false;
+    } else {
+      toast('Flashs non chargés (' + e.message + ') — tous les invaders seront proposés', 5000);
+    }
   }
 
   buildMarkers();
