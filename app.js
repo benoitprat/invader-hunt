@@ -166,14 +166,50 @@ function startGeoloc() {
   }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
 }
 
-// ---------- recherche d'adresse ----------
+// ---------- recherche d'adresse ou d'invader ----------
 let searchTimer;
-async function doSearch(q) {
+
+// "PA_123", "pa 123", "PA-1" (zéro-padding géré), ou nombre seul → Paris
+function findInvaderQuery(q) {
+  q = q.trim().toUpperCase().replace(/\s+/g, '');
+  let m = q.match(/^([A-Z]+)[_-]?(\d+)$/);
+  if (!m && /^\d+$/.test(q)) m = [null, 'PA', q];
+  if (!m) return null;
+  const [, city, num] = m;
+  for (const pad of [num, num.padStart(2, '0'), num.padStart(3, '0')]) {
+    const inv = invaders.find(i => i.id === city + '_' + pad);
+    if (inv) return inv;
+  }
+  return null;
+}
+
+function goToFoundInvader(inv) {
+  $('search-results').hidden = true;
+  $('search').blur();
+  const notes = [];
+  if (flashed.has(inv.id)) notes.push('déjà flashé ✅');
+  if (isDead(inv)) notes.push('statut : ' + inv.status + ' ⚠️');
+  if (notes.length) toast(`${inv.id} — ${notes.join(' · ')}`, 4000);
+  setDestination({ lat: inv.lat, lng: inv.lng }, inv.id);
+}
+
+async function doSearch(q, direct) {
+  const inv = findInvaderQuery(q);
+  const box = $('search-results');
+  if (inv && direct) { goToFoundInvader(inv); return; }
+  box.innerHTML = '';
+  if (inv) {
+    const div = document.createElement('div');
+    const st = flashed.has(inv.id) ? ' · déjà flashé ✅' : (isDead(inv) ? ` · ${inv.status} ⚠️` : '');
+    div.textContent = `👾 ${inv.id} — ${inv.pts || '?'} pts${st}`;
+    div.onclick = () => goToFoundInvader(inv);
+    box.appendChild(div);
+    box.hidden = false;
+    return; // un id d'invader n'est pas une adresse : inutile d'interroger Nominatim
+  }
   const url = `${NOMINATIM}?format=jsonv2&limit=5&accept-language=fr&countrycodes=fr&q=${encodeURIComponent(q)}`;
   const res = await fetch(url);
   const results = await res.json();
-  const box = $('search-results');
-  box.innerHTML = '';
   if (!results.length) { box.hidden = true; toast('Aucun résultat'); return; }
   for (const r of results) {
     const div = document.createElement('div');
@@ -531,13 +567,13 @@ async function init() {
   };
 
   $('search').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.target.value.trim()) doSearch(e.target.value.trim());
+    if (e.key === 'Enter' && e.target.value.trim()) doSearch(e.target.value.trim(), true);
   });
   $('search').addEventListener('input', e => {
     clearTimeout(searchTimer);
     const q = e.target.value.trim();
     if (q.length < 4) { $('search-results').hidden = true; return; }
-    searchTimer = setTimeout(() => doSearch(q), 700);
+    searchTimer = setTimeout(() => doSearch(q, false), 700);
   });
 
   $('btn-clear-route').onclick = clearRoute;
