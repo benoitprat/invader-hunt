@@ -58,6 +58,15 @@ html, body {
   font-size: 15px;
 }
 #layers-panel label { display: block; padding: 6px 2px; }
+#layers-panel .sel-row {
+  border-top: 1px solid #eee; margin-top: 6px; padding-top: 10px;
+  font-size: 14px; color: #333;
+}
+#min-pts {
+  display: block; width: 100%; margin-top: 5px; padding: 8px;
+  border: 1px solid #ccc; border-radius: 8px; font-size: 15px; background: #fff;
+}
+#north-arrow { display: inline-block; transition: transform .12s linear; }
 
 #settings-panel, #rando-panel {
   left: 10px; right: 10px; bottom: auto;

@@ -23,6 +23,7 @@
 <div id="search-results" hidden></div>
 
 <div id="fabs">
+  <button id="btn-north" title="Remettre au nord" hidden><span id="north-arrow">⬆️</span></button>
   <button id="btn-locate" title="Ma position">📍</button>
   <button id="btn-rando" title="Rando invaders">🥾</button>
   <button id="btn-layers" title="Affichage">👾</button>
@@ -68,6 +69,16 @@
   <label><input type="checkbox" id="chk-flashed" checked> Déjà flashés (gris)</label>
   <label><input type="checkbox" id="chk-destroyed"> 💥 Détruits (rouge)</label>
   <label><input type="checkbox" id="chk-hidden"> 🙈 Cachés (noir)</label>
+  <label class="sel-row">Valeur minimale
+    <select id="min-pts">
+      <option value="0" selected>toutes</option>
+      <option value="20">≥ 20 pts</option>
+      <option value="30">≥ 30 pts</option>
+      <option value="40">≥ 40 pts</option>
+      <option value="50">≥ 50 pts</option>
+      <option value="100">100 pts</option>
+    </select>
+  </label>
 </div>
 
 <div id="settings-panel" hidden>
@@ -96,6 +107,7 @@
 <div id="toast" hidden></div>
 
 <script src="vendor/leaflet.js"></script>
+<script src="vendor/leaflet-rotate.js"></script>
 <script src="version.js"></script>
 <script src="app.js"></script>
 </body>

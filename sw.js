@@ -1,4 +1,4 @@
-const CACHE = 'invader-hunt-2026-07-30.1754';
+const CACHE = 'invader-hunt-2026-07-30.1814';
 const TILE_CACHE = 'tiles-v1';
 const TILE_MAX = 2500; // ~50 Mo de tuiles de carte max
 const ASSETS = [
@@ -9,6 +9,7 @@ const ASSETS = [
   'version.js',
   'vendor/leaflet.js',
   'vendor/leaflet.css',
+  'vendor/leaflet-rotate.js',
   'vendor/images/marker-icon.png',
   'vendor/images/marker-icon-2x.png',
   'vendor/images/marker-shadow.png',

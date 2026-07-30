@@ -117,8 +117,11 @@ function buildMarkers() {
   layerDestroyed = L.layerGroup();
   layerHidden = L.layerGroup();
   const rend = canvasRenderer();
+  const minPts = +$('min-pts').value;
   for (const inv of invaders) {
     const isFl = flashed.has(inv.id);
+    // le filtre de valeur ne concerne que les cibles restantes
+    if (minPts && !isFl && !isDead(inv) && inv.status !== 'hidden' && inv.pts < minPts) continue;
     let opts, layer;
     if (inv.status === 'hidden') {
       opts = { radius: 5, color: '#000000', fillColor: '#1f2937', fillOpacity: .75, weight: 1.5 };
@@ -476,9 +479,25 @@ async function generateRando() {
   }
 }
 
+// ---------- orientation de la carte ----------
+function updateNorthButton() {
+  const deg = map.getBearing ? map.getBearing() : 0;
+  const btn = $('btn-north');
+  btn.hidden = Math.abs(((deg % 360) + 360) % 360) < 0.5;
+  $('north-arrow').style.transform = `rotate(${deg}deg)`;
+}
+
 // ---------- init ----------
 async function init() {
-  map = L.map('map', { zoomControl: false }).setView([48.8566, 2.3522], 13);
+  map = L.map('map', {
+    zoomControl: false,
+    rotate: true,          // rotation de la carte…
+    touchRotate: true,     // …au pincement à deux doigts
+    rotateControl: false,  // on utilise notre propre bouton nord
+    compassBearing: false  // jamais de boussole : le capteur viderait la batterie
+  }).setView([48.8566, 2.3522], 13);
+
+  map.on('rotate', updateNorthButton);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
@@ -547,6 +566,8 @@ async function init() {
     $('rando-arr-wrap').hidden = rad;
     $('rando-radius-wrap').hidden = !rad;
   });
+  $('btn-north').onclick = () => { map.setBearing(0); updateNorthButton(); };
+  $('min-pts').onchange = buildMarkers;
   $('chk-unflashed').onchange = e => e.target.checked ? layerUnflashed.addTo(map) : layerUnflashed.remove();
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
   $('chk-destroyed').onchange = e => e.target.checked ? layerDestroyed.addTo(map) : layerDestroyed.remove();
