@@ -89,7 +89,82 @@ async function loadFlashed(force = false) {
 }
 
 // ---------- marqueurs ----------
-const canvasRenderer = () => L.canvas({ padding: 0.4 });
+// Le calque canvas vit dans le pane qui pivote : il suit donc la rotation tout seul.
+// Le redessiner à chaque image du geste (plus de 4000 marqueurs) le faisait décrocher
+// visuellement de la carte sur téléphone ; un seul redessin après le geste suffit.
+const rendererGetEvents = L.Renderer.prototype.getEvents;
+L.Renderer.include({
+  getEvents: function () {
+    const events = rendererGetEvents.apply(this, arguments);
+    const renderer = this;
+    let timer;
+    events.rotate = function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { renderer._update(); }, 150);
+    };
+    return events;
+  }
+});
+
+// marge élargie : pendant la rotation, le canvas n'est pas redessiné, il doit donc
+// déjà couvrir les coins que la rotation amène dans le champ
+const canvasRenderer = () => L.canvas({ padding: 0.5 });
+
+// mode « valeur » : échelle chaude selon les points, statuts recolorés pour ne pas la parasiter
+const VALUE_RAMP = [
+  { min: 100, fill: '#991b1b', r: 11, ring: '#fbbf24' },
+  { min: 50, fill: '#ef4444', r: 8.5 },
+  { min: 40, fill: '#f97316', r: 7 },
+  { min: 30, fill: '#fb923c', r: 6 },
+  { min: 20, fill: '#fcd34d', r: 5 },
+  { min: 1, fill: '#fde68a', r: 4 }
+];
+const VALUE_STATUS = {
+  flashed: { radius: 4, color: '#16a34a', fillColor: '#bbf7d0', fillOpacity: .85, weight: 1 },
+  destroyed: { radius: 4, color: '#000000', fillColor: '#171717', fillOpacity: .8, weight: 1 },
+  hidden: { radius: 5, color: '#6b7280', fillColor: '#9ca3af', fillOpacity: .8, weight: 1.5 },
+  unknown: { radius: 4, color: '#6b7280', fillColor: '#f9fafb', fillOpacity: .9, weight: 1 }
+};
+
+function colorMode() { return localStorage.getItem('colorMode') === 'value' ? 'value' : 'status'; }
+
+function markerStyle(inv, isFl) {
+  if (colorMode() === 'value') {
+    if (inv.status === 'hidden') return VALUE_STATUS.hidden;
+    if (isDead(inv)) return VALUE_STATUS.destroyed;
+    if (isFl) return VALUE_STATUS.flashed;
+    if (!inv.pts) return VALUE_STATUS.unknown;
+    const t = VALUE_RAMP.find(v => inv.pts >= v.min);
+    return { radius: t.r, color: t.ring || '#3f3f46', fillColor: t.fill, fillOpacity: .95, weight: t.ring ? 2.5 : 1 };
+  }
+  if (inv.status === 'hidden') return { radius: 5, color: '#000000', fillColor: '#1f2937', fillOpacity: .75, weight: 1.5 };
+  if (isDead(inv)) return { radius: 4, color: '#b91c1c', fillColor: '#ef4444', fillOpacity: .5, weight: 1 };
+  if (isFl) return { radius: 4, color: '#6b7280', fillColor: '#9ca3af', fillOpacity: .6, weight: 1 };
+  if (isDamaged(inv)) return { radius: 6, color: '#c2410c', fillColor: '#fb923c', fillOpacity: .9, weight: 1.5 };
+  return { radius: 6, color: '#5b21b6', fillColor: '#8b5cf6', fillOpacity: .9, weight: 1.5 };
+}
+
+function updateLegend() {
+  const val = colorMode() === 'value';
+  const paint = (id, s) => {
+    const e = $(id);
+    e.style.background = s.fillColor;
+    e.style.borderColor = s.color;
+  };
+  paint('sw-todo', val ? { fillColor: '#f97316', color: '#3f3f46' } : { fillColor: '#8b5cf6', color: '#5b21b6' });
+  paint('sw-flashed', val ? VALUE_STATUS.flashed : { fillColor: '#9ca3af', color: '#6b7280' });
+  paint('sw-dead', val ? VALUE_STATUS.destroyed : { fillColor: '#ef4444', color: '#b91c1c' });
+  paint('sw-hidden', val ? VALUE_STATUS.hidden : { fillColor: '#1f2937', color: '#000000' });
+  const leg = $('value-legend');
+  if (val && !leg.dataset.built) {
+    leg.innerHTML = VALUE_RAMP.slice().reverse().map(t => {
+      const d = Math.round(t.r * 2);
+      return `<div><i style="width:${d}px;height:${d}px;background:${t.fill};border:1px solid ${t.ring || '#3f3f46'}"></i>${t.min === 1 ? 10 : t.min}</div>`;
+    }).join('');
+    leg.dataset.built = '1';
+  }
+  leg.hidden = !val;
+}
 function isDead(inv) { return DEAD_STATUSES.has(inv.status); }
 function isDamaged(inv) { return inv.status.includes('damaged'); }
 
@@ -122,24 +197,11 @@ function buildMarkers() {
     const isFl = flashed.has(inv.id);
     // le filtre de valeur ne concerne que les cibles restantes
     if (minPts && !isFl && !isDead(inv) && inv.status !== 'hidden' && inv.pts < minPts) continue;
-    let opts, layer;
-    if (inv.status === 'hidden') {
-      opts = { radius: 5, color: '#000000', fillColor: '#1f2937', fillOpacity: .75, weight: 1.5 };
-      layer = layerHidden;
-    } else if (isDead(inv)) {
-      opts = { radius: 4, color: '#b91c1c', fillColor: '#ef4444', fillOpacity: .5, weight: 1 };
-      layer = layerDestroyed;
-    } else if (isFl) {
-      opts = { radius: 4, color: '#6b7280', fillColor: '#9ca3af', fillOpacity: .6, weight: 1 };
-      layer = layerFlashedGrp;
-    } else if (isDamaged(inv)) {
-      opts = { radius: 6, color: '#c2410c', fillColor: '#fb923c', fillOpacity: .9, weight: 1.5 };
-      layer = layerUnflashed;
-    } else {
-      opts = { radius: 6, color: '#5b21b6', fillColor: '#8b5cf6', fillOpacity: .9, weight: 1.5 };
-      layer = layerUnflashed;
-    }
-    L.circleMarker([inv.lat, inv.lng], { ...opts, renderer: rend })
+    const layer = inv.status === 'hidden' ? layerHidden
+      : isDead(inv) ? layerDestroyed
+      : isFl ? layerFlashedGrp
+      : layerUnflashed;
+    L.circleMarker([inv.lat, inv.lng], { ...markerStyle(inv, isFl), renderer: rend })
       .bindPopup(() => invaderPopup(inv))
       .addTo(layer);
   }
@@ -541,6 +603,7 @@ async function init() {
     }
   }
 
+  updateLegend();
   buildMarkers();
   startGeoloc();
 
@@ -568,6 +631,12 @@ async function init() {
   });
   $('btn-north').onclick = () => { map.setBearing(0); updateNorthButton(); };
   $('min-pts').onchange = buildMarkers;
+  $('color-mode').value = colorMode();
+  $('color-mode').onchange = e => {
+    localStorage.setItem('colorMode', e.target.value);
+    updateLegend();
+    buildMarkers();
+  };
   $('chk-unflashed').onchange = e => e.target.checked ? layerUnflashed.addTo(map) : layerUnflashed.remove();
   $('chk-flashed').onchange = e => e.target.checked ? layerFlashedGrp.addTo(map) : layerFlashedGrp.remove();
   $('chk-destroyed').onchange = e => e.target.checked ? layerDestroyed.addTo(map) : layerDestroyed.remove();

@@ -17,7 +17,9 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 - Appui long (mobile) / clic droit (desktop) sur la carte : poser un départ 🚩 ou une destination 🎯 manuellement.
 - 🥾 : générer une **rando** — deux types de zone : par **arrondissement** (avec compteur d'invaders restants) ou **autour d'un point** (rayon de 250 m à 2 km ; centre = départ manuel 🚩, sinon ma position, sinon le centre de la carte, cercle affiché sur la carte). Dans les deux cas : distance visée (3 à 12 km), boucle ou traverse, tournée optimisée par OSRM (service `trip`).
 - 📷 : chaque invader (popup et liste d'étapes) pointe vers la recherche Instagram `#PA_<n°>` pour voir des visuels de la mosaïque.
-- 👾 : afficher/masquer les flashés et les détruits.
+- 👾 : couches affichées, **filtre de valeur minimale**, et bascule des **couleurs** entre deux modes mémorisés dans le navigateur :
+  - *statut* — violet à flasher, orange endommagé, gris flashé, rouge détruit, noir caché ;
+  - *valeur en points* — échelle chaude du jaune (10 pts) au rouge sombre cerclé d'or (100 pts) pour les cibles, vert clair pour les flashés, noir pour les détruits, gris pour les cachés.
 
 ## Hors ligne
 

@@ -65,10 +65,17 @@
 </div>
 
 <div id="layers-panel" hidden>
-  <label><input type="checkbox" id="chk-unflashed" checked> 🎯 À flasher (violet/orange)</label>
-  <label><input type="checkbox" id="chk-flashed" checked> Déjà flashés (gris)</label>
-  <label><input type="checkbox" id="chk-destroyed"> 💥 Détruits (rouge)</label>
-  <label><input type="checkbox" id="chk-hidden"> 🙈 Cachés (noir)</label>
+  <label class="sel-row first">Couleurs
+    <select id="color-mode">
+      <option value="status">Statut (classique)</option>
+      <option value="value">Valeur en points</option>
+    </select>
+  </label>
+  <div id="value-legend" hidden></div>
+  <label><input type="checkbox" id="chk-unflashed" checked> <i class="sw" id="sw-todo"></i> 🎯 À flasher</label>
+  <label><input type="checkbox" id="chk-flashed" checked> <i class="sw" id="sw-flashed"></i> Déjà flashés</label>
+  <label><input type="checkbox" id="chk-destroyed"> <i class="sw" id="sw-dead"></i> 💥 Détruits</label>
+  <label><input type="checkbox" id="chk-hidden"> <i class="sw" id="sw-hidden"></i> 🙈 Cachés</label>
   <label class="sel-row">Valeur minimale
     <select id="min-pts">
       <option value="0" selected>toutes</option>
