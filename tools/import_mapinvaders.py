@@ -86,13 +86,15 @@ def main():
             if ov.get('lat') is None or ov.get('lng') is None:
                 print(f"  ignoré (ni dans la source, ni de coordonnées) : {iid}")
                 continue
+            # points : ceux du relevé, sinon ceux que les sources connaissent déjà
+            pts = int(ov.get('pts') or 0) or points_of(spotter.get(iid, {})) or points_of(spotter_full.get(iid, {}))
             out.append({
                 'id': iid,
                 'city': iid.split('_')[0] if '_' in iid else iid,
                 'lat': round(float(ov['lat']), 6),
                 'lng': round(float(ov['lng']), 6),
                 'status': ov.get('status') or 'OK',
-                'pts': int(ov.get('pts') or 0),
+                'pts': pts,
                 'hint': ov.get('note') or '',
                 'arr': None,
             })

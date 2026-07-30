@@ -1,10 +1,19 @@
 {
-  "_doc": "Observations de terrain prioritaires sur les sources importées. Corriger un invader : {status, date, note}. En ajouter un que la source ne localise pas encore : {lat, lng, pts, status, date, note}. À élaguer quand MapInvaders rattrape l'info.",
-  "_exemple_ajout": { "PA_1590": { "lat": 48.8566, "lng": 2.3522, "pts": 30, "date": "2026-07-30", "note": "relevé sur place" } },
+  "_doc": "Observations de terrain prioritaires sur les sources importées. Corriger un invader : {status, date, note}. En ajouter un que la source ne localise pas encore : {lat, lng, pts, status, date, note} — si pts vaut 0, l'import reprend la valeur connue des sources. À élaguer quand MapInvaders rattrape l'info.",
+
   "PA_235": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_696": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_513": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_796": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_919": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" },
-  "PA_167": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" }
+  "PA_167": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" },
+
+  "PA_1590": { "lat": 48.891881, "lng": 2.390338, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1591": { "lat": 48.894702, "lng": 2.388171, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1592": { "lat": 48.889143, "lng": 2.388349, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1593": { "lat": 48.886662, "lng": 2.393906, "pts": 30, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1594": { "lat": 48.866308, "lng": 2.314614, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1595": { "lat": 48.893586, "lng": 2.327045, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1596": { "lat": 48.889106, "lng": 2.39293, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+  "PA_1597": { "lat": 48.845957, "lng": 2.385157, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" }
 }
