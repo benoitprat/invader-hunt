@@ -541,6 +541,11 @@ async function generateRando() {
   }
 }
 
+// ---------- panneaux ----------
+function closePanels() {
+  for (const id of ['layers-panel', 'rando-panel', 'settings-panel', 'search-results']) $(id).hidden = true;
+}
+
 // ---------- orientation de la carte ----------
 function updateNorthButton() {
   const deg = map.getBearing ? map.getBearing() : 0;
@@ -614,13 +619,17 @@ async function init() {
     startGeoloc();
   };
   $('btn-layers').onclick = () => {
-    $('rando-panel').hidden = true; $('settings-panel').hidden = true;
-    $('layers-panel').hidden = !$('layers-panel').hidden;
+    const ouvert = !$('layers-panel').hidden;
+    closePanels();
+    $('layers-panel').hidden = ouvert;
   };
+  $('btn-layers-close').onclick = closePanels;
+  map.on('click', closePanels); // un appui sur la carte referme les panneaux
   $('btn-rando').onclick = () => {
-    $('layers-panel').hidden = true; $('settings-panel').hidden = true;
+    const ouvert = !$('rando-panel').hidden;
+    closePanels();
     populateRandoArr();
-    $('rando-panel').hidden = !$('rando-panel').hidden;
+    $('rando-panel').hidden = ouvert;
   };
   $('btn-rando-close').onclick = () => { $('rando-panel').hidden = true; };
   $('btn-rando-go').onclick = generateRando;
@@ -630,9 +639,12 @@ async function init() {
     $('rando-radius-wrap').hidden = !rad;
   });
   $('btn-north').onclick = () => { map.setBearing(0); updateNorthButton(); };
-  $('min-pts').onchange = buildMarkers;
+  // sur iOS, un <select> qui garde le focus après le sélecteur natif fait avaler
+  // l'appui suivant : on lui retire le focus tout de suite
+  $('min-pts').onchange = e => { e.target.blur(); buildMarkers(); };
   $('color-mode').value = colorMode();
   $('color-mode').onchange = e => {
+    e.target.blur();
     localStorage.setItem('colorMode', e.target.value);
     updateLegend();
     buildMarkers();
@@ -643,12 +655,13 @@ async function init() {
   $('chk-hidden').onchange = e => e.target.checked ? layerHidden.addTo(map) : layerHidden.remove();
 
   $('btn-settings').onclick = () => {
-    $('layers-panel').hidden = true; $('rando-panel').hidden = true;
+    const ouvert = !$('settings-panel').hidden;
+    closePanels();
     $('uid-input').value = getUid();
     $('build-info').textContent = 'Build ' + (typeof BUILD !== 'undefined' ? BUILD : 'inconnu');
     const paMax = invaders.reduce((m, i) => i.city === 'PA' ? Math.max(m, +i.id.split('_')[1] || 0) : m, 0);
     $('db-info').textContent = `Base : ${invaders.length} invaders, jusqu'à PA_${paMax}`;
-    $('settings-panel').hidden = !$('settings-panel').hidden;
+    $('settings-panel').hidden = ouvert;
   };
   $('btn-close-settings').onclick = () => { $('settings-panel').hidden = true; };
   $('btn-refresh-flash').onclick = async () => {
