@@ -1,5 +1,6 @@
 {
-  "_doc": "Observations de terrain prioritaires sur les sources importées. Format: id → {status, date, note}. À élaguer quand MapInvaders rattrape l'info.",
+  "_doc": "Observations de terrain prioritaires sur les sources importées. Corriger un invader : {status, date, note}. En ajouter un que la source ne localise pas encore : {lat, lng, pts, status, date, note}. À élaguer quand MapInvaders rattrape l'info.",
+  "_exemple_ajout": { "PA_1590": { "lat": 48.8566, "lng": 2.3522, "pts": 30, "date": "2026-07-30", "note": "relevé sur place" } },
   "PA_235": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_696": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_513": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },

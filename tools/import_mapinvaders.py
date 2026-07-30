@@ -61,16 +61,44 @@ def main():
             'hint': x.get('hint') or '',
             'arr': None,  # rempli par add_arrondissements.py
         })
-    # observations de terrain (data/overrides.json) : prioritaires sur les sources
+    # observations de terrain (data/overrides.json) : prioritaires sur les sources.
+    # Une entrée peut corriger un invader existant ou en ajouter un que la source
+    # ne localise pas encore, si elle porte "lat" et "lng".
     ov_path = ROOT / 'data/overrides.json'
     if ov_path.exists():
         overrides = {k: v for k, v in json.load(open(ov_path)).items() if not k.startswith('_')}
-        applied = 0
+        connus = {x['id'] for x in out}
+        corriges = ajoutes = 0
         for x in out:
-            if x['id'] in overrides:
-                x['status'] = overrides[x['id']]['status']
-                applied += 1
-        print(f'overrides appliqués: {applied}/{len(overrides)}')
+            ov = overrides.get(x['id'])
+            if not ov:
+                continue
+            if ov.get('status'):
+                x['status'] = ov['status']
+            if ov.get('lat') is not None and ov.get('lng') is not None:
+                x['lat'], x['lng'] = round(float(ov['lat']), 6), round(float(ov['lng']), 6)
+            if ov.get('pts'):
+                x['pts'] = int(ov['pts'])
+            corriges += 1
+        for iid, ov in sorted(overrides.items()):
+            if iid in connus:
+                continue
+            if ov.get('lat') is None or ov.get('lng') is None:
+                print(f"  ignoré (ni dans la source, ni de coordonnées) : {iid}")
+                continue
+            out.append({
+                'id': iid,
+                'city': iid.split('_')[0] if '_' in iid else iid,
+                'lat': round(float(ov['lat']), 6),
+                'lng': round(float(ov['lng']), 6),
+                'status': ov.get('status') or 'OK',
+                'pts': int(ov.get('pts') or 0),
+                'hint': ov.get('note') or '',
+                'arr': None,
+            })
+            ajoutes += 1
+        out.sort(key=lambda x: x['id'])
+        print(f'observations de terrain : {corriges} corrigés, {ajoutes} ajoutés')
 
     json.dump(out, open(ROOT / 'data/invaders.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     pa = [x for x in out if x['city'] == 'PA']

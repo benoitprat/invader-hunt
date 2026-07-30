@@ -548,6 +548,19 @@ async function generateRando() {
   }
 }
 
+// ---------- relevé d'un invader non répertorié ----------
+// Sert à noter sur place la position d'un invader que la base ne connaît pas
+// encore, pour l'ajouter ensuite dans data/overrides.json.
+function copyCoords(c) {
+  const txt = `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
+  const fini = ok => toast(ok ? `📋 Copié : ${txt}` : `Coordonnées : ${txt}`, 8000);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => fini(true), () => fini(false));
+  } else {
+    fini(false);
+  }
+}
+
 // ---------- panneaux ----------
 function closePanels() {
   for (const id of ['layers-panel', 'rando-panel', 'settings-panel', 'search-results']) $(id).hidden = true;
@@ -588,7 +601,10 @@ async function init() {
     const b2 = document.createElement('button');
     b2.textContent = '🎯 Destination ici';
     b2.onclick = () => { map.closePopup(); setDestination({ lat: c.lat, lng: c.lng }); };
-    div.append(b1, b2);
+    const b3 = document.createElement('button');
+    b3.textContent = '👾 Relever ces coordonnées';
+    b3.onclick = () => { map.closePopup(); copyCoords(c); };
+    div.append(b1, b2, b3);
     L.popup().setLatLng(c).setContent(div).openOn(map);
   });
 
