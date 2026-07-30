@@ -49,6 +49,17 @@ def main():
             'hint': x.get('hint') or '',
             'arr': None,  # rempli par add_arrondissements.py
         })
+    # observations de terrain (data/overrides.json) : prioritaires sur les sources
+    ov_path = ROOT / 'data/overrides.json'
+    if ov_path.exists():
+        overrides = {k: v for k, v in json.load(open(ov_path)).items() if not k.startswith('_')}
+        applied = 0
+        for x in out:
+            if x['id'] in overrides:
+                x['status'] = overrides[x['id']]['status']
+                applied += 1
+        print(f'overrides appliqués: {applied}/{len(overrides)}')
+
     json.dump(out, open(ROOT / 'data/invaders.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     pa = [x for x in out if x['city'] == 'PA']
     print(f'total: {len(out)} | PA: {len(pa)} | PA max: {max(int(x["id"].split("_")[1]) for x in pa)}')

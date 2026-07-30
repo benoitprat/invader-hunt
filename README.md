@@ -40,6 +40,8 @@ python3 tools/bump_build.py            # nouveau build
 git commit -am "maj données" && git push
 ```
 
+`data/overrides.json` contient les observations faites sur le terrain (invader trouvé alors qu'il était marqué détruit, ou constaté détruit) ; l'import les applique en dernier, donc elles survivent aux mises à jour de MapInvaders. Une entrée peut être supprimée quand la source a rattrapé l'information.
+
 ## Limites connues
 
 - `SPACE2ISS` (l'invader de la Station spatiale internationale) n'est pas sur la carte.

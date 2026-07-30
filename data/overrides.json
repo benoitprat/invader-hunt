@@ -1,0 +1,9 @@
+{
+  "_doc": "Observations de terrain prioritaires sur les sources importées. Format: id → {status, date, note}. À élaguer quand MapInvaders rattrape l'info.",
+  "PA_235": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
+  "PA_696": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
+  "PA_513": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
+  "PA_796": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
+  "PA_919": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" },
+  "PA_167": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" }
+}
