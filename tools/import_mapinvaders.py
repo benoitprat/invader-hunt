@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCES = {
     'mi': 'https://chborel.ch/mapinvaders/json/invaders.json',
     'spotter': 'https://chborel.ch/wp-content/uploads/2024/08/invader_spotter2_data_clean.json',
+    # jeu plus complet : sert uniquement à combler les points manquants du précédent
+    'spotter_full': 'https://chborel.ch/wp-content/uploads/2024/08/invader_spotter_data_clean_test.json',
     'manual': 'https://chborel.ch/wp-content/uploads/2024/08/manual_map.json',
 }
 
@@ -22,9 +24,17 @@ def fetch(url):
         return json.loads(r.read().decode('utf-8-sig'))
 
 
+def points_of(entry):
+    try:
+        return int(entry.get('point') or 0)
+    except (ValueError, TypeError):
+        return 0
+
+
 def main():
     mi = fetch(SOURCES['mi'])
     spotter = fetch(SOURCES['spotter'])['invaders']
+    spotter_full = fetch(SOURCES['spotter_full'])['invaders']
     manual = fetch(SOURCES['manual'])
 
     coords = {}
@@ -33,12 +43,14 @@ def main():
             coords[x['id']] = x
 
     out = []
+    filled = 0
     for iid, x in sorted(coords.items()):
         sp = spotter.get(iid, {})
-        try:
-            pts = int(sp.get('point') or 0)
-        except ValueError:
-            pts = 0
+        pts = points_of(sp)
+        if not pts:  # secours, sans jamais écraser une valeur connue
+            pts = points_of(spotter_full.get(iid, {}))
+            if pts:
+                filled += 1
         out.append({
             'id': iid,
             'city': iid.split('_')[0] if '_' in iid else iid,
@@ -63,6 +75,7 @@ def main():
     json.dump(out, open(ROOT / 'data/invaders.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     pa = [x for x in out if x['city'] == 'PA']
     print(f'total: {len(out)} | PA: {len(pa)} | PA max: {max(int(x["id"].split("_")[1]) for x in pa)}')
+    print(f'points comblés via spotter_full: {filled}')
     print(f'sans points: {sum(1 for x in out if not x["pts"])} | sans statut: {sum(1 for x in out if not x["status"])}')
 
 

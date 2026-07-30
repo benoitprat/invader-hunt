@@ -5,7 +5,7 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 ## Fonctionnement
 
 - **Mes flashs** : récupérés en direct depuis l'API FlashInvaders (`api/gallery?uid=…`), mis en cache 6 h dans le navigateur. UID modifiable dans ⚙️ Réglages.
-- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (4335 invaders géolocalisés, statuts à jour dont les réactivations), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
+- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (4335 invaders géolocalisés, statuts à jour dont les réactivations), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. Les points manquants sont comblés par un second jeu invader-spotter, sans jamais écraser une valeur déjà connue (55 invaders restent sans points, aucun à Paris). (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
 - **Carte** : Leaflet + tuiles OpenStreetMap. Violet = à flasher, orange = à flasher mais endommagé, gris = déjà flashé, rouge = détruit/caché (masqués par défaut, et jamais proposés dans les itinéraires).
 - **Itinéraires** : OSRM piéton (instance FOSSGIS `routing.openstreetmap.de`). L'app calcule le trajet direct, cherche les invaders non flashés dans un corridor de 200 m, les ordonne le long du trajet et recalcule l'itinéraire en passant par eux (max 60 étapes ; au-delà, priorité aux plus proches du chemin).
 - **Adresses** : géocodage Nominatim (OpenStreetMap).
