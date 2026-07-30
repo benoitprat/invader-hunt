@@ -42,6 +42,12 @@ python3 tools/bump_build.py            # nouveau build
 git commit -am "maj données" && git push
 ```
 
+### Relevés de terrain
+
+Le « mode relevé » (⚙️, décoché par défaut) ajoute à l'appui long une entrée pour noter un invader absent de la base : identifiant pré-rempli avec le prochain numéro parisien référencé mais non localisé, position prise sur la carte, arrondissement déduit de l'invader connu le plus proche.
+
+**Ces relevés ne quittent pas le téléphone** : ils sont stockés dans le `localStorage` du navigateur et fusionnés à l'affichage. Le site étant statique, aucun visiteur ne peut écrire dans la base commune — la seule voie d'entrée est un commit dans ce dépôt. Le bouton « Copier » produit le fragment JSON à coller dans `data/overrides.json`.
+
 `data/overrides.json` contient les observations faites sur le terrain (invader trouvé alors qu'il était marqué détruit, ou constaté détruit) ; l'import les applique en dernier, donc elles survivent aux mises à jour de MapInvaders. Une entrée peut être supprimée quand la source a rattrapé l'information.
 
 Le panneau ⚙️ compare la base locale au décompte officiel renvoyé par l'API FlashInvaders (`cities[].si_count`), ce qui indique combien d'invaders parisiens référencés ne sont pas encore localisés par la source communautaire.

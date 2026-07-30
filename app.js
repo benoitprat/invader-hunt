@@ -548,17 +548,96 @@ async function generateRando() {
   }
 }
 
-// ---------- relevé d'un invader non répertorié ----------
-// Sert à noter sur place la position d'un invader que la base ne connaît pas
-// encore, pour l'ajouter ensuite dans data/overrides.json.
-function copyCoords(c) {
-  const txt = `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
-  const fini = ok => toast(ok ? `📋 Copié : ${txt}` : `Coordonnées : ${txt}`, 8000);
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(txt).then(() => fini(true), () => fini(false));
-  } else {
-    fini(false);
+// ---------- relevés de terrain ----------
+// Un invader repéré sur place mais absent de la base est enregistré sur le
+// téléphone : il apparaît aussitôt sur la carte et survit aux mises à jour,
+// en attendant d'être versé dans data/overrides.json.
+function releveMode() { return localStorage.getItem('releveMode') === '1'; }
+
+function loadReleves() {
+  try { return JSON.parse(localStorage.getItem('releves') || '[]'); } catch (e) { return []; }
+}
+function saveReleves(list) { localStorage.setItem('releves', JSON.stringify(list)); }
+
+function mergeReleves() {
+  const connus = new Map(invaders.map(i => [i.id, i]));
+  for (const r of loadReleves()) {
+    const deja = connus.get(r.id);
+    if (deja) { // relevé qui corrige une position existante
+      deja.lat = r.lat; deja.lng = r.lng; deja.perso = true;
+      continue;
+    }
+    // arrondissement repris de l'invader connu le plus proche
+    let arr = null, best = Infinity;
+    for (const i of invaders) {
+      if (!i.arr) continue;
+      const d = haversine(r, i);
+      if (d < best) { best = d; arr = i.arr; }
+    }
+    const ajout = {
+      id: r.id, city: r.id.split('_')[0], lat: r.lat, lng: r.lng,
+      status: 'OK', pts: r.pts || 0, hint: 'relevé sur place',
+      arr: best < 1000 ? arr : null, perso: true
+    };
+    invaders.push(ajout);
+    connus.set(r.id, ajout);
   }
+}
+
+// prochain numéro parisien référencé mais non localisé (PA_1590 et suivants)
+function nextMissingId() {
+  const nums = invaders.filter(i => i.city === 'PA').map(i => +i.id.split('_')[1]);
+  const max = nums.length ? Math.max(...nums) : 0;
+  const total = officialCounts && officialCounts.paris ? officialCounts.paris : 0;
+  return max < total ? 'PA_' + (max + 1) : '';
+}
+
+function showReleveForm(c) {
+  const div = document.createElement('div');
+  div.className = 'ctx-popup';
+  const titre = document.createElement('div');
+  titre.className = 'ctx-title';
+  titre.textContent = '👾 Noter un invader ici';
+  const id = document.createElement('input');
+  id.className = 'releve-input'; id.type = 'text';
+  id.value = nextMissingId(); id.placeholder = 'PA_1590';
+  const pts = document.createElement('input');
+  pts.className = 'releve-input'; pts.type = 'number'; pts.inputMode = 'numeric';
+  pts.placeholder = 'points (facultatif)';
+  const ok = document.createElement('button');
+  ok.textContent = '✅ Enregistrer';
+  ok.onclick = () => {
+    const val = id.value.trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (!/^[A-Z]+_\d+$/.test(val)) { toast('Identifiant attendu, par exemple PA_1590'); return; }
+    const list = loadReleves().filter(r => r.id !== val);
+    list.push({
+      id: val, lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6),
+      pts: +pts.value || 0, date: new Date().toISOString().slice(0, 10)
+    });
+    saveReleves(list);
+    map.closePopup();
+    mergeReleves();
+    buildMarkers();
+    toast(`👾 ${val} enregistré — ${list.length} relevé${list.length > 1 ? 's' : ''} sur ce téléphone`, 5000);
+  };
+  div.append(titre, id, pts, ok);
+  L.popup().setLatLng(c).setContent(div).openOn(map);
+}
+
+function majRelevesInfo() {
+  const n = loadReleves().length;
+  const actif = releveMode();
+  $('releves-info').textContent = !actif && !n ? ''
+    : n ? `${n} relevé${n > 1 ? 's' : ''} sur ce téléphone, en attente d'intégration à la base`
+      : 'Appui long sur la carte pour noter un invader absent de la base.';
+  $('releves-actions').hidden = n === 0;
+}
+
+// format prêt à coller dans data/overrides.json
+function relevesEnJson() {
+  return loadReleves().map(r =>
+    `  "${r.id}": { "lat": ${r.lat}, "lng": ${r.lng}, "pts": ${r.pts}, "date": "${r.date}", "note": "relevé sur place" }`
+  ).join(',\n');
 }
 
 // ---------- panneaux ----------
@@ -601,10 +680,13 @@ async function init() {
     const b2 = document.createElement('button');
     b2.textContent = '🎯 Destination ici';
     b2.onclick = () => { map.closePopup(); setDestination({ lat: c.lat, lng: c.lng }); };
-    const b3 = document.createElement('button');
-    b3.textContent = '👾 Relever ces coordonnées';
-    b3.onclick = () => { map.closePopup(); copyCoords(c); };
-    div.append(b1, b2, b3);
+    div.append(b1, b2);
+    if (releveMode()) { // relevé de terrain : désactivé par défaut
+      const b3 = document.createElement('button');
+      b3.textContent = '👾 Noter un invader ici';
+      b3.onclick = () => showReleveForm(c);
+      div.append(b3);
+    }
     L.popup().setLatLng(c).setContent(div).openOn(map);
   });
 
@@ -612,6 +694,7 @@ async function init() {
   try {
     const res = await fetch('data/invaders.json');
     invaders = await res.json();
+    mergeReleves();
   } catch (e) { toast('Impossible de charger la base des invaders'); return; }
 
   // flashs
@@ -691,9 +774,28 @@ async function init() {
       txt += retard > 0 ? ` — ${retard} pas encore localisé${retard > 1 ? 's' : ''}` : ' — base complète 🎉';
     }
     $('db-info').textContent = txt;
+    $('chk-releve').checked = releveMode();
+    majRelevesInfo();
     $('settings-panel').hidden = ouvert;
   };
   $('btn-close-settings').onclick = () => { $('settings-panel').hidden = true; };
+  $('chk-releve').onchange = e => {
+    localStorage.setItem('releveMode', e.target.checked ? '1' : '0');
+    majRelevesInfo();
+  };
+  $('btn-releves-copy').onclick = () => {
+    const txt = relevesEnJson();
+    const fini = ok => toast(ok ? '📋 Relevés copiés — collez-les dans la conversation' : txt, 9000);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(() => fini(true), () => fini(false));
+    } else { fini(false); }
+  };
+  $('btn-releves-clear').onclick = () => {
+    if (!confirm('Effacer les relevés enregistrés sur ce téléphone ?')) return;
+    saveReleves([]);
+    majRelevesInfo();
+    toast('Relevés effacés — rechargez pour les retirer de la carte', 5000);
+  };
   $('btn-refresh-flash').onclick = async () => {
     const uid = $('uid-input').value.trim();
     if (uid) localStorage.setItem('uid', uid);
