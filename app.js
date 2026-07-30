@@ -9,6 +9,7 @@ const FLASH_CACHE_TTL = 6 * 3600 * 1000;
 const DEAD_STATUSES = new Set(['destroyed', 'hidden']);
 
 let map, invaders = [], flashed = new Set(), playerName = '';
+let officialCounts = null;
 let userPos = null, startPoint = null, destPoint = null;
 let userMarker = null, accCircle = null, startMarker = null, destMarker = null;
 let directLine = null, routeLine = null, routeStopsLayer = null, randoCircle = null;
@@ -75,6 +76,7 @@ async function loadFlashed(force = false) {
       if (Date.now() - c.ts < FLASH_CACHE_TTL) {
         flashed = new Set(c.ids);
         playerName = c.name || '';
+        officialCounts = c.counts || null;
         return;
       }
     } catch (e) { /* cache illisible → refetch */ }
@@ -85,7 +87,12 @@ async function loadFlashed(force = false) {
   if (!data.invaders) throw new Error('Réponse inattendue de FlashInvaders');
   flashed = new Set(Object.keys(data.invaders));
   playerName = (data.player && data.player.name) || '';
-  localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), ids: [...flashed], name: playerName }));
+  // décompte officiel : sert à mesurer le retard de la base communautaire
+  const paris = (data.cities || []).find(c => c.name === 'Paris');
+  officialCounts = { monde: data.total_si_count || 0, paris: paris ? paris.si_count : 0 };
+  localStorage.setItem(cacheKey, JSON.stringify({
+    ts: Date.now(), ids: [...flashed], name: playerName, counts: officialCounts
+  }));
 }
 
 // ---------- marqueurs ----------
@@ -660,7 +667,14 @@ async function init() {
     $('uid-input').value = getUid();
     $('build-info').textContent = 'Build ' + (typeof BUILD !== 'undefined' ? BUILD : 'inconnu');
     const paMax = invaders.reduce((m, i) => i.city === 'PA' ? Math.max(m, +i.id.split('_')[1] || 0) : m, 0);
-    $('db-info').textContent = `Base : ${invaders.length} invaders, jusqu'à PA_${paMax}`;
+    const nbPa = invaders.reduce((n, i) => i.city === 'PA' ? n + 1 : n, 0);
+    let txt = `Base : ${invaders.length} invaders localisés, jusqu'à PA_${paMax}`;
+    if (officialCounts && officialCounts.paris) {
+      const retard = officialCounts.paris - nbPa;
+      txt += `\nParis : ${nbPa} / ${officialCounts.paris} référencés`;
+      txt += retard > 0 ? ` — ${retard} pas encore localisé${retard > 1 ? 's' : ''}` : ' — base complète 🎉';
+    }
+    $('db-info').textContent = txt;
     $('settings-panel').hidden = ouvert;
   };
   $('btn-close-settings').onclick = () => { $('settings-panel').hidden = true; };

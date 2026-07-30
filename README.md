@@ -44,6 +44,8 @@ git commit -am "maj données" && git push
 
 `data/overrides.json` contient les observations faites sur le terrain (invader trouvé alors qu'il était marqué détruit, ou constaté détruit) ; l'import les applique en dernier, donc elles survivent aux mises à jour de MapInvaders. Une entrée peut être supprimée quand la source a rattrapé l'information.
 
+Le panneau ⚙️ compare la base locale au décompte officiel renvoyé par l'API FlashInvaders (`cities[].si_count`), ce qui indique combien d'invaders parisiens référencés ne sont pas encore localisés par la source communautaire.
+
 ## Limites connues
 
 - `SPACE2ISS` (l'invader de la Station spatiale internationale) n'est pas sur la carte.

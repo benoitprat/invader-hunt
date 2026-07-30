@@ -117,7 +117,7 @@ html, body {
   background: #7c3aed; color: #fff;
 }
 .row button#btn-close-settings, .row button#btn-clear-route { background: #e5e7eb; color: #111; }
-.muted { color: #888; font-size: 13px; }
+.muted { color: #888; font-size: 13px; white-space: pre-line; }
 
 #route-panel {
   position: fixed;
