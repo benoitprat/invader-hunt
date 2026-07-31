@@ -2,11 +2,13 @@
 
 PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affiche sur une carte les invaders que je n'ai pas encore flashés, et calcule des itinéraires piétons qui en capturent un maximum sans s'écarter de plus de **200 m** du chemin direct.
 
+> Ce fichier décrit l'usage et l'exploitation. Pour les décisions d'architecture et leurs raisons, voir [docs/choix-techniques.md](docs/choix-techniques.md) ; pour les idées étudiées, écartées ou en attente, voir [docs/pistes.md](docs/pistes.md).
+
 ## Fonctionnement
 
 - **Mes flashs** : récupérés en direct depuis l'API FlashInvaders (`api/gallery?uid=…`), mis en cache 6 h dans le navigateur. UID modifiable dans ⚙️ Réglages.
-- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (4335 invaders géolocalisés, statuts à jour dont les réactivations), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. Les points manquants sont comblés par un second jeu invader-spotter, sans jamais écraser une valeur déjà connue (55 invaders restent sans points, aucun à Paris). (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
-- **Carte** : Leaflet + tuiles OpenStreetMap. Violet = à flasher, orange = à flasher mais endommagé, gris = déjà flashé, rouge = détruit/caché (masqués par défaut, et jamais proposés dans les itinéraires).
+- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (statuts à jour, réactivations comprises), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. Base actuelle : 4343 invaders localisés, dont **Paris complet à 1597 sur 1597** référencés. Les points manquants sont comblés par un second jeu invader-spotter, sans jamais écraser une valeur déjà connue (55 invaders restent sans points, aucun à Paris). (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
+- **Carte** : Leaflet + tuiles OpenStreetMap, rotation manuelle à deux doigts. Deux modes de couleur au choix, par statut ou par valeur en points ; les détruits et les cachés sont masqués par défaut et ne sont jamais proposés dans les itinéraires.
 - **Itinéraires** : OSRM piéton (instance FOSSGIS `routing.openstreetmap.de`). L'app calcule le trajet direct, cherche les invaders non flashés dans un corridor de 200 m, les ordonne le long du trajet et recalcule l'itinéraire en passant par eux (max 60 étapes ; au-delà, priorité aux plus proches du chemin).
 - **Adresses** : géocodage Nominatim (OpenStreetMap).
 
