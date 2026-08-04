@@ -7,6 +7,7 @@
   "PA_796": { "status": "OK", "date": "2026-07-30", "note": "réactivé — flashé sur place" },
   "PA_919": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" },
   "PA_167": { "status": "destroyed", "date": "2026-07-30", "note": "constaté détruit sur place" },
+  "PA_762": { "status": "destroyed", "date": "2026-07-31", "note": "constaté détruit sur place" },
 
   "PA_1590": { "lat": 48.891881, "lng": 2.390338, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
   "PA_1591": { "lat": 48.894702, "lng": 2.388171, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },

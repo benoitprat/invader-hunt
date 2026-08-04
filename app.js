@@ -187,9 +187,15 @@ function invaderPopup(inv) {
   const state = flashed.has(inv.id) ? '✅ déjà flashé' : '🎯 à flasher';
   const st = inv.status || 'inconnu';
   const hint = inv.hint ? `<br>💡 ${inv.hint}` : '';
-  return `<div class="inv-popup"><b>${inv.id}</b> · ${inv.pts} pts<br>${state} · état : ${st}${hint}
+  const perso = inv.perso ? '<br><span class="perso">observé par vous sur place</span>' : '';
+  // en mode relevé : signaler ce qu'on constate devant la mosaïque
+  const signal = !releveMode() ? ''
+    : isDead(inv)
+      ? `<button class="alt" onclick="signalerStatut('${inv.id}','OK')">✅ Signaler présent</button>`
+      : `<button class="alt" onclick="signalerStatut('${inv.id}','destroyed')">💥 Signaler détruit</button>`;
+  return `<div class="inv-popup"><b>${inv.id}</b> · ${inv.pts} pts<br>${state} · état : ${st}${hint}${perso}
     <br><a href="${instaUrl(inv.id)}" target="_blank" rel="noopener">📷 Visuels #${inv.id} sur Instagram</a>
-    <button onclick="goToInvader('${inv.id}')">🎯 Y aller</button></div>`;
+    <button onclick="goToInvader('${inv.id}')">🎯 Y aller</button>${signal}</div>`;
 }
 
 function buildMarkers() {
@@ -563,10 +569,13 @@ function mergeReleves() {
   const connus = new Map(invaders.map(i => [i.id, i]));
   for (const r of loadReleves()) {
     const deja = connus.get(r.id);
-    if (deja) { // relevé qui corrige une position existante
-      deja.lat = r.lat; deja.lng = r.lng; deja.perso = true;
+    if (deja) { // relevé qui corrige un invader déjà connu : position, état, ou les deux
+      if (r.lat != null && r.lng != null) { deja.lat = r.lat; deja.lng = r.lng; }
+      if (r.status) deja.status = r.status;
+      deja.perso = true;
       continue;
     }
+    if (r.lat == null || r.lng == null) continue; // un invader inconnu sans position n'est pas plaçable
     // arrondissement repris de l'invader connu le plus proche
     let arr = null, best = Infinity;
     for (const i of invaders) {
@@ -635,10 +644,34 @@ function majRelevesInfo() {
 
 // format prêt à coller dans data/overrides.json
 function relevesEnJson() {
-  return loadReleves().map(r =>
-    `  "${r.id}": { "lat": ${r.lat}, "lng": ${r.lng}, "pts": ${r.pts}, "date": "${r.date}", "note": "relevé sur place" }`
-  ).join(',\n');
+  return loadReleves().map(r => {
+    const champs = [];
+    if (r.lat != null && r.lng != null) champs.push(`"lat": ${r.lat}`, `"lng": ${r.lng}`);
+    if (r.pts) champs.push(`"pts": ${r.pts}`);
+    if (r.status) champs.push(`"status": "${r.status}"`);
+    champs.push(`"date": "${r.date}"`, `"note": "relevé sur place"`);
+    return `  "${r.id}": { ${champs.join(', ')} }`;
+  }).join(',\n');
 }
+
+// signalement fait devant la mosaïque : détruite, ou au contraire toujours là
+window.signalerStatut = function (id, statut) {
+  const inv = invaders.find(i => i.id === id);
+  if (!inv) return;
+  const list = loadReleves();
+  const i = list.findIndex(r => r.id === id);
+  const entree = i >= 0 ? list[i] : { id };
+  entree.status = statut;
+  entree.date = new Date().toISOString().slice(0, 10);
+  if (i < 0) list.push(entree);
+  saveReleves(list);
+  map.closePopup();
+  mergeReleves();
+  buildMarkers();
+  toast(statut === 'destroyed'
+    ? `💥 ${id} signalé détruit — il sortira de vos itinéraires`
+    : `✅ ${id} signalé présent — il revient dans vos cibles`, 5000);
+};
 
 // ---------- panneaux ----------
 function closePanels() {

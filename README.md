@@ -46,7 +46,10 @@ git commit -am "maj données" && git push
 
 ### Relevés de terrain
 
-Le « mode relevé » (⚙️, décoché par défaut) ajoute à l'appui long une entrée pour noter un invader absent de la base : identifiant pré-rempli avec le prochain numéro parisien référencé mais non localisé, position prise sur la carte, arrondissement déduit de l'invader connu le plus proche.
+Le « mode relevé » (⚙️, décoché par défaut) ouvre deux gestes de terrain :
+
+- **Noter un invader absent de la base**, par appui long sur la carte : identifiant pré-rempli avec le prochain numéro parisien référencé mais non localisé, position prise sur la carte, arrondissement déduit de l'invader connu le plus proche.
+- **Signaler un changement d'état**, depuis la fiche d'un invader : « Signaler détruit » le retire aussitôt des cibles et des randos ; sur un invader déjà marqué détruit ou caché, le bouton devient « Signaler présent » et le fait revenir dans les cibles.
 
 **Ces relevés ne quittent pas le téléphone** : ils sont stockés dans le `localStorage` du navigateur et fusionnés à l'affichage. Le site étant statique, aucun visiteur ne peut écrire dans la base commune — la seule voie d'entrée est un commit dans ce dépôt. Le bouton « Copier » produit le fragment JSON à coller dans `data/overrides.json`.
 

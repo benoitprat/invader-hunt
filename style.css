@@ -4,7 +4,13 @@ html, body {
   margin: 0; height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overscroll-behavior: none;
+  /* sans cela, l'appui long sur la carte ouvre le menu natif iOS (Copier, Rechercher)
+     par-dessus notre propre menu Départ / Destination */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+input, textarea { -webkit-user-select: text; user-select: text; }
 #map { position: fixed; inset: 0; background: #ddd; }
 
 #topbar {
@@ -179,3 +185,5 @@ html, body {
   padding: 8px 12px; font-size: 13px; cursor: pointer;
   background: #7c3aed; color: #fff;
 }
+.inv-popup button.alt { background: #f3e8ff; color: #5b21b6; margin-left: 6px; }
+.inv-popup .perso { color: #7c3aed; font-weight: 600; }
