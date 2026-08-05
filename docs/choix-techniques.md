@@ -74,6 +74,22 @@ Les métadonnées disponibles par étape se limitent au nom de la voie, au mode 
 
 Le corridor est calculé par projection des invaders sur la géométrie du trajet direct. La contrainte s'applique aux invaders retenus comme étapes ; le chemin entre deux étapes suit les rues et peut ponctuellement déborder. Au-delà de 60 points de passage, priorité aux plus proches du trajet.
 
+### Ajout manuel d'une étape
+
+L'itinéraire affiché est conservé en mémoire (`currentTrip` : départ, étapes, boucle ou non, arrivée imposée éventuelle) pour qu'on puisse y ajouter une cible et relancer le calcul. L'ajout passe systématiquement par le service `trip`, y compris en mode « Y aller » qui utilise `route` au premier calcul : c'est le seul service qui réordonne les points, et un invader ajouté depuis le panneau n'a aucune raison de se trouver au bon rang dans la liste existante.
+
+Ce qui est laissé libre et ce qui ne l'est pas :
+
+| Contexte | Départ | Arrivée | Milieu |
+|---|---|---|---|
+| Rando en boucle | `source=first` | retour au départ (`roundtrip=true`) | réordonné |
+| Rando en traverse | `source=first` | `destination=last` — dernière étape courante, préservée en insérant les ajouts avant elle | réordonné |
+| « Y aller » | `source=first` | `destination=last` — la destination choisie | réordonné |
+
+Contrainte volontairement levée : la **distance visée** n'est plus opposable après coup. Elle sert à composer la rando initiale ; un ajout manuel est une décision explicite, la refuser au nom du budget serait absurde. Le dépassement est simplement rappelé dans le résumé. Le plafond de 60 étapes, lui, reste opposable — c'est une limite du moteur, pas une préférence.
+
+Un échec de routage laisse l'itinéraire précédent intact : l'étape n'est retenue que si le recalcul aboutit.
+
 ---
 
 ## Données

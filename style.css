@@ -141,7 +141,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   font-size: 18px; padding: 4px 10px; cursor: pointer;
   color: #7c3aed;
 }
-#route-panel.min #route-list, #route-panel.min .row { display: none; }
+#route-panel.min #route-list, #route-panel.min .row, #route-panel.min #route-add { display: none; }
 #route-summary { font-size: 14px; line-height: 1.5; padding-right: 34px; }
 #route-summary b { color: #7c3aed; }
 #route-list {
@@ -153,6 +153,17 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   display: flex; justify-content: space-between;
 }
 #route-list div:active { background: #f3e8ff; }
+#route-add { display: flex; gap: 8px; margin-top: 10px; }
+#route-add input {
+  flex: 1; min-width: 0; padding: 9px;
+  border: 1px solid #ccc; border-radius: 8px;
+  font-size: 16px; /* en dessous, iOS zoome sur le champ à la mise au point */
+  text-transform: uppercase;
+}
+#route-add button {
+  border: none; border-radius: 8px; padding: 9px 14px;
+  font-size: 14px; cursor: pointer; background: #7c3aed; color: #fff;
+}
 
 #toast {
   position: fixed; left: 50%; transform: translateX(-50%);

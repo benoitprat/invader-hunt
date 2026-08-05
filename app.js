@@ -9,6 +9,11 @@ const FLASH_CACHE_TTL = 6 * 3600 * 1000;
 const DEAD_STATUSES = new Set(['destroyed', 'hidden']);
 
 let map, invaders = [], flashed = new Set(), playerName = '';
+// itinéraire affiché, conservé pour pouvoir y ajouter une étape et recalculer la tournée
+// { start, stops:[{inv}], loop, end, direct, emoji, budget }
+//   end   : point d'arrivée imposé qui n'est pas une étape (destination du mode « Y aller »)
+//   loop  : tournée fermée ; sinon la dernière étape de `stops` fait office d'arrivée
+let currentTrip = null;
 let officialCounts = null;
 let userPos = null, startPoint = null, destPoint = null;
 let userMarker = null, accCircle = null, startMarker = null, destMarker = null;
@@ -193,9 +198,12 @@ function invaderPopup(inv) {
     : isDead(inv)
       ? `<button class="alt" onclick="signalerStatut('${inv.id}','OK')">✅ Signaler présent</button>`
       : `<button class="alt" onclick="signalerStatut('${inv.id}','destroyed')">💥 Signaler détruit</button>`;
+  // proposé seulement s'il y a un itinéraire en cours où l'invader ne figure pas déjà
+  const ajout = currentTrip && !currentTrip.stops.some(s => s.inv.id === inv.id)
+    ? `<button class="alt" onclick="ajouterAuParcours('${inv.id}')">➕ Ajouter au parcours</button>` : '';
   return `<div class="inv-popup"><b>${inv.id}</b> · ${inv.pts} pts<br>${state} · état : ${st}${hint}${perso}
     <br><a href="${instaUrl(inv.id)}" target="_blank" rel="noopener">📷 Visuels #${inv.id} sur Instagram</a>
-    <button onclick="goToInvader('${inv.id}')">🎯 Y aller</button>${signal}</div>`;
+    <button onclick="goToInvader('${inv.id}')">🎯 Y aller</button>${ajout}${signal}</div>`;
 }
 
 function buildMarkers() {
@@ -361,7 +369,70 @@ function clearRoute() {
   directLine = routeLine = routeStopsLayer = randoCircle = null;
   if (destMarker) { destMarker.remove(); destMarker = null; }
   destPoint = null;
+  currentTrip = null;
+  $('route-add').hidden = true;
   $('route-panel').hidden = true;
+}
+
+// ---------- ajout d'une étape à l'itinéraire affiché ----------
+// Recalcule la tournée la plus courte passant par toutes les étapes retenues.
+// Le départ reste le départ ; l'arrivée aussi quand elle est imposée (destination
+// explicite, ou dernière étape d'une traverse) — seul l'ordre du milieu est libre.
+async function recomputeTrip() {
+  const t = currentTrip;
+  const pts = [t.start, ...t.stops.map(s => ({ lat: s.inv.lat, lng: s.inv.lng }))];
+  if (t.end) pts.push(t.end);
+  const { trip, order } = await osrmTrip(pts, t.loop);
+  // order[k] = rang de visite du k-e point envoyé (0 = départ) → on réordonne les étapes
+  t.stops = t.stops
+    .map((s, k) => ({ inv: s.inv, rank: order[k + 1] }))
+    .sort((a, b) => a.rank - b.rank);
+  drawRoute(t.direct, trip, t.stops, t.emoji);
+}
+
+// renvoie true si l'étape a bien été ajoutée et l'itinéraire redessiné
+async function addStop(inv) {
+  const t = currentTrip;
+  if (!t) { toast('Aucun itinéraire en cours — générez une rando 🥾 ou choisissez une destination 🎯'); return false; }
+  if (t.stops.some(s => s.inv.id === inv.id)) { toast(`${inv.id} est déjà dans l’itinéraire`); return false; }
+  if (t.stops.length >= MAX_WAYPOINTS) { toast(`Maximum atteint : ${MAX_WAYPOINTS} étapes par itinéraire`, 4000); return false; }
+
+  const stop = { inv };
+  // traverse : l'arrivée est la dernière étape, le nouveau point s'insère avant elle
+  if (!t.loop && !t.end && t.stops.length) t.stops.splice(t.stops.length - 1, 0, stop);
+  else t.stops.push(stop);
+
+  toast('Recalcul de l’itinéraire… 👾', 8000);
+  try {
+    await recomputeTrip();
+    const notes = [];
+    if (flashed.has(inv.id)) notes.push('déjà flashé ✅');
+    if (isDead(inv)) notes.push('statut : ' + inv.status + ' ⚠️');
+    toast(`👾 ${inv.id} ajouté${notes.length ? ' — ' + notes.join(' · ') : ''}`, 4000);
+    return true;
+  } catch (e) {
+    t.stops = t.stops.filter(s => s !== stop); // échec du routage : l'itinéraire affiché reste celui d'avant
+    toast('Erreur : ' + e.message, 5000);
+    return false;
+  }
+}
+
+window.ajouterAuParcours = function (id) {
+  const inv = invaders.find(i => i.id === id);
+  if (inv) { map.closePopup(); addStop(inv); }
+};
+
+// saisie d'une référence dans le panneau d'itinéraire
+// en cas de refus, le champ reste ouvert avec sa saisie : elle est là pour être corrigée
+async function submitAddStop() {
+  const q = $('route-add-input').value.trim();
+  if (!q) return;
+  const inv = findInvaderQuery(q);
+  if (!inv) { toast(`Aucun invader ne correspond à « ${q} »`, 4000); return; }
+  $('route-add-input').blur(); // referme le clavier pendant le recalcul
+  if (!await addStop(inv)) return;
+  $('route-add-input').value = '';
+  $('route-add').hidden = true;
 }
 
 async function computeRoute() {
@@ -399,6 +470,7 @@ async function computeRoute() {
       stops = candidates;
     }
 
+    currentTrip = { start, stops, loop: false, end: destPoint, direct, emoji: '👾', budget: 0 };
     drawRoute(direct, route, stops, '👾');
   } catch (e) {
     toast('Erreur : ' + e.message, 5000);
@@ -432,6 +504,10 @@ function drawRoute(direct, route, stops, emoji) {
     const extraT = route.duration - direct.duration;
     line2 += ` <span class="muted">(direct : ${fmtDist(direct.distance)}, +${fmtDist(Math.max(0, extraD))} / +${fmtDur(Math.max(0, extraT))})</span>`;
   }
+  const budget = currentTrip && currentTrip.budget;
+  if (budget && route.distance > budget) {
+    line2 += ` <span class="muted">(objectif : ${fmtDist(budget)})</span>`;
+  }
   $('route-summary').innerHTML =
     `${emoji} <b>${stops.length} invader${stops.length > 1 ? 's' : ''}</b> à flasher · <b>${pts} pts</b><br>` + line2;
   const list = $('route-list');
@@ -446,6 +522,7 @@ function drawRoute(direct, route, stops, emoji) {
   });
   $('route-panel').classList.remove('min');
   $('btn-route-min').textContent = '▾';
+  $('route-add').hidden = true;
   $('route-panel').hidden = false;
   if (!stops.length) toast('Aucun nouvel invader à moins de 200 m du chemin 😢', 4000);
 }
@@ -548,6 +625,8 @@ async function generateRando() {
         radius: circle.radius, color: '#7c3aed', weight: 2, dashArray: '4 6', fillColor: '#8b5cf6', fillOpacity: .06
       }).addTo(map);
     }
+    // budget mémorisé : un ajout d'étape peut le dépasser, autant l'afficher
+    currentTrip = { start, stops, loop, end: null, direct: null, emoji: title, budget };
     drawRoute(null, trip, stops, title);
   } catch (e) {
     toast('Erreur : ' + e.message, 5000);
@@ -852,6 +931,13 @@ async function init() {
   });
 
   $('btn-clear-route').onclick = clearRoute;
+  $('btn-route-add').onclick = () => {
+    const wrap = $('route-add');
+    wrap.hidden = !wrap.hidden;
+    if (!wrap.hidden) { $('route-add-input').value = ''; $('route-add-input').focus(); }
+  };
+  $('btn-route-add-go').onclick = submitAddStop;
+  $('route-add-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitAddStop(); });
   $('btn-route-min').onclick = () => {
     const min = $('route-panel').classList.toggle('min');
     $('btn-route-min').textContent = min ? '▴' : '▾';
