@@ -16,5 +16,10 @@
   "PA_1594": { "lat": 48.866308, "lng": 2.314614, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
   "PA_1595": { "lat": 48.893586, "lng": 2.327045, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
   "PA_1596": { "lat": 48.889106, "lng": 2.39293, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
-  "PA_1597": { "lat": 48.845957, "lng": 2.385157, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" }
+  "PA_1597": { "lat": 48.845957, "lng": 2.385157, "pts": 0, "date": "2026-07-30", "note": "relevé sur place" },
+
+  "PA_759": { "status": "destroyed", "date": "2026-08-10", "note": "constaté détruit sur place" },
+  "PA_258": { "status": "destroyed", "date": "2026-08-19", "note": "constaté détruit sur place" },
+  "PA_1335": { "lat": 48.837501, "lng": 2.25541, "date": "2026-08-10", "note": "position corrigée sur place" },
+  "FTBL_34": { "lat": 48.322895, "lng": 2.563492, "status": "OK", "date": "2026-08-10", "note": "revu présent sur place — réactivé et repositionné" }
 }
