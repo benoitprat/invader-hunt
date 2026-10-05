@@ -101,12 +101,13 @@ Un échec de routage laisse l'itinéraire précédent intact : l'étape n'est re
 | Invaders flashés | API FlashInvaders (`gallery?uid=`) | Nécessite l'UID du joueur, mis en cache 6 h |
 | Décompte officiel par ville | Même réponse, `cities[].si_count` | Sert à mesurer la couverture de la base |
 | Positions | [MapInvaders](https://chborel.ch/mapinvaders/) | Plus à jour que le dépôt goguelnikov utilisé au départ |
+| Positions de dernier recours | [Findvaders](https://findvaders.com/), via le fichier `json/findvaders.json` de MapInvaders | Même priorité que sur la carte MapInvaders ; les invasions récentes y arrivent souvent en premier |
 | Points | Jeux invader-spotter | Le second jeu, plus complet, comble les manquants |
 | Arrondissements | opendata.paris.fr | Précalculés dans le champ `arr` |
 
 ### Priorité et reproductibilité
 
-L'import (`tools/import_mapinvaders.py`) est rejouable et applique les sources dans cet ordre, du moins au plus prioritaire : positions MapInvaders, points invader-spotter, puis **observations de terrain** (`data/overrides.json`).
+L'import (`tools/import_mapinvaders.py`) est rejouable et applique les sources dans cet ordre, du moins au plus prioritaire : positions MapInvaders (complétées par Findvaders pour les seuls invaders qu'elles ne localisent pas), points invader-spotter (puis Findvaders en secours), puis **observations de terrain** (`data/overrides.json`). Les états sont normalisés au passage : les sources mélangent `destroyed` et `DESTROYED`, et l'app ne reconnaît que les minuscules.
 
 Les observations de terrain sont donc appliquées en dernier et **survivent aux rafraîchissements de source**. Une entrée peut corriger un invader existant (statut, position, points) ou en **créer un** que la source ne localise pas encore, si elle porte `lat` et `lng`. Un point laissé à 0 est complété depuis les sources quand elles le connaissent.
 
@@ -114,7 +115,7 @@ Les observations de terrain sont donc appliquées en dernier et **survivent aux 
 
 ### État
 
-Paris est complet : 1597 invaders sur 1597 référencés, les huit derniers ayant été relevés sur le terrain le 30 juillet 2026. À l'échelle mondiale, 4343 localisés sur 4411 référencés.
+Paris : 1598 invaders localisés. Les numéros 1590 à 1597 ont d'abord été relevés sur le terrain le 30 juillet 2026, et PA_1598 est arrivé par Findvaders. À l'échelle mondiale : 4387 localisés (octobre 2026), dont les 19 de Stockholm (STK) et les derniers de Laponie (LAP).
 
 ### Validation d'une source avant adoption
 

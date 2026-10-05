@@ -7,7 +7,7 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 ## Fonctionnement
 
 - **Mes flashs** : récupérés en direct depuis l'API FlashInvaders (`api/gallery?uid=…`), mis en cache 6 h dans le navigateur. UID modifiable dans ⚙️ Réglages.
-- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (statuts à jour, réactivations comprises), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. Base actuelle : 4343 invaders localisés, dont **Paris complet à 1597 sur 1597** référencés. Les points manquants sont comblés par un second jeu invader-spotter, sans jamais écraser une valeur déjà connue (55 invaders restent sans points, aucun à Paris). (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
+- **Localisation des mosaïques** : sources de [MapInvaders](https://chborel.ch/mapinvaders/) (statuts à jour, réactivations comprises), importées dans `data/invaders.json` par `tools/import_mapinvaders.py`. Comme la carte MapInvaders, l'import prend en dernier recours les positions de [Findvaders](https://findvaders.com/), où les invasions récentes arrivent souvent en premier (Stockholm, septembre 2026). Base actuelle : 4387 invaders localisés, dont 1598 à Paris. Les points manquants sont comblés par un second jeu invader-spotter puis par Findvaders, sans jamais écraser une valeur déjà connue (60 invaders restent sans points, aucun à Paris). Les états sont normalisés à l'import (`DESTROYED` → `destroyed`, etc.), car l'app ne reconnaît que les formes minuscules. (Historique : le projet utilisait initialement [goguelnikov/SpaceInvaders](https://github.com/goguelnikov/SpaceInvaders), moins à jour.)
 - **Carte** : Leaflet + tuiles OpenStreetMap, rotation manuelle à deux doigts. Deux modes de couleur au choix, par statut ou par valeur en points ; les détruits et les cachés sont masqués par défaut et ne sont jamais proposés dans les itinéraires.
 - **Itinéraires** : OSRM piéton (instance FOSSGIS `routing.openstreetmap.de`). L'app calcule le trajet direct, cherche les invaders non flashés dans un corridor de 200 m, les ordonne le long du trajet et recalcule l'itinéraire en passant par eux (max 60 étapes ; au-delà, priorité aux plus proches du chemin).
 - **Adresses** : géocodage Nominatim (OpenStreetMap).
@@ -61,7 +61,7 @@ Le panneau ⚙️ compare la base locale au décompte officiel renvoyé par l'AP
 ## Limites connues
 
 - `SPACE2ISS` (l'invader de la Station spatiale internationale) n'est pas sur la carte.
-- Les invaders trop récents pour MapInvaders n'apparaissent qu'après leur prochaine mise à jour (relancer l'import).
+- Les invaders trop récents pour MapInvaders et Findvaders n'apparaissent qu'après leur prochaine mise à jour (relancer l'import). En attendant, une position relevée sur place ou repérée sur Street View peut être ajoutée dans `data/overrides.json`.
 - La contrainte des 200 m s'applique aux invaders choisis comme étapes ; le chemin entre deux étapes suit les rues et peut très ponctuellement déborder du corridor.
 
 ## Déploiement
