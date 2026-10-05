@@ -21,5 +21,7 @@
   "PA_759": { "status": "destroyed", "date": "2026-08-10", "note": "constaté détruit sur place" },
   "PA_258": { "status": "destroyed", "date": "2026-08-19", "note": "constaté détruit sur place" },
   "PA_1335": { "lat": 48.837501, "lng": 2.25541, "date": "2026-08-10", "note": "position corrigée sur place" },
-  "FTBL_34": { "lat": 48.322895, "lng": 2.563492, "status": "OK", "date": "2026-08-10", "note": "revu présent sur place — réactivé et repositionné" }
+  "FTBL_34": { "lat": 48.322895, "lng": 2.563492, "status": "OK", "date": "2026-08-10", "note": "revu présent sur place — réactivé et repositionné" },
+
+  "STK_01": { "lat": 59.33108, "lng": 18.065963, "pts": 40, "status": "OK", "date": "2026-10-05", "note": "position via Street View (±20 m) — Stockholm under the snow" }
 }
