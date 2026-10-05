@@ -241,7 +241,7 @@ function startGeoloc() {
     const acc = pos.coords.accuracy;
     if (!userMarker) {
       userMarker = L.circleMarker(userPos, { radius: 8, color: '#fff', fillColor: '#2563eb', fillOpacity: 1, weight: 3 }).addTo(map);
-      accCircle = L.circle(userPos, { radius: acc, color: '#2563eb', weight: 1, fillOpacity: .08 }).addTo(map);
+      accCircle = L.circle(userPos, { radius: acc, color: '#2563eb', weight: 1, fillOpacity: .08, interactive: false }).addTo(map);
     } else {
       userMarker.setLatLng(userPos);
       accCircle.setLatLng(userPos).setRadius(acc);
@@ -482,10 +482,10 @@ function drawRoute(direct, route, stops, emoji) {
   directLine = null;
   if (direct) {
     const directCoords = direct.geometry.coordinates.map(c => [c[1], c[0]]);
-    directLine = L.polyline(directCoords, { color: '#6b7280', weight: 3, dashArray: '6 8', opacity: .7 }).addTo(map);
+    directLine = L.polyline(directCoords, { color: '#6b7280', weight: 3, dashArray: '6 8', opacity: .7, interactive: false }).addTo(map);
   }
   const routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-  routeLine = L.polyline(routeCoords, { color: '#7c3aed', weight: 5, opacity: .85 }).addTo(map);
+  routeLine = L.polyline(routeCoords, { color: '#7c3aed', weight: 5, opacity: .85, interactive: false }).addTo(map);
   routeStopsLayer = L.layerGroup().addTo(map);
   stops.forEach((s, i) => {
     L.marker([s.inv.lat, s.inv.lng], {
@@ -622,7 +622,8 @@ async function generateRando() {
     }
     if (circle) {
       randoCircle = L.circle(circle.center, {
-        radius: circle.radius, color: '#7c3aed', weight: 2, dashArray: '4 6', fillColor: '#8b5cf6', fillOpacity: .06
+        radius: circle.radius, color: '#7c3aed', weight: 2, dashArray: '4 6', fillColor: '#8b5cf6', fillOpacity: .06,
+        interactive: false // ne capte pas les taps : les invaders dessous restent cliquables
       }).addTo(map);
     }
     // budget mémorisé : un ajout d'étape peut le dépasser, autant l'afficher
@@ -781,9 +782,12 @@ async function init() {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // appui long (contextmenu) : définir départ ou destination
-  map.on('contextmenu', e => {
-    const c = e.latlng;
+  // poser un départ / une destination : appui long (tactile) ou clic droit (desktop)
+  let lastPlaceMenu = 0;
+  function openPlaceMenu(c) {
+    const now = Date.now();
+    if (now - lastPlaceMenu < 500) return; // un appui long peut déclencher à la fois notre handler et 'contextmenu'
+    lastPlaceMenu = now;
     const div = document.createElement('div');
     div.className = 'ctx-popup';
     const b1 = document.createElement('button');
@@ -799,8 +803,39 @@ async function init() {
       b3.onclick = () => showReleveForm(c);
       div.append(b3);
     }
-    L.popup().setLatLng(c).setContent(div).openOn(map);
-  });
+    // closeOnClick/autoClose off : sur mobile, le « clic » de synthèse qui suit la levée
+    // du doigt refermait le menu à peine ouvert. On arme la fermeture au tap suivant,
+    // mais seulement après un court délai pour laisser passer ce clic parasite.
+    L.popup({ closeOnClick: false, autoClose: false }).setLatLng(c).setContent(div).openOn(map);
+    setTimeout(() => map.once('click', () => map.closePopup()), 400);
+  }
+  map.on('contextmenu', e => openPlaceMenu(e.latlng));
+
+  // Appui long tactile maison : le 'contextmenu' de Leaflet sur mobile est intermittent
+  // (d'autant plus avec le greffon de rotation). On détecte une pression immobile d'un
+  // seul doigt, sans jamais preventDefault (le pan reste intact) ; un déplacement > 12 px
+  // l'annule — c'est un pan, pas un appui long.
+  (function () {
+    const el = map.getContainer();
+    let timer = null, sx = 0, sy = 0;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    el.addEventListener('touchstart', ev => {
+      cancel();
+      if (ev.touches.length !== 1) return; // deux doigts : zoom / rotation
+      sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
+      timer = setTimeout(() => {
+        timer = null;
+        if (navigator.vibrate) navigator.vibrate(12); // retour haptique (Android)
+        openPlaceMenu(map.mouseEventToLatLng({ clientX: sx, clientY: sy }));
+      }, 450);
+    }, { passive: true });
+    el.addEventListener('touchmove', ev => {
+      const t = ev.touches[0];
+      if (!t || Math.hypot(t.clientX - sx, t.clientY - sy) > 12) cancel();
+    }, { passive: true });
+    el.addEventListener('touchend', cancel, { passive: true });
+    el.addEventListener('touchcancel', cancel, { passive: true });
+  })();
 
   // données invaders
   try {
