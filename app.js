@@ -784,7 +784,10 @@ async function init() {
 
   // poser un départ / une destination : appui long (tactile) ou clic droit (desktop)
   let lastPlaceMenu = 0;
-  function openPlaceMenu(c) {
+  const armCloseOnTap = () => map.once('click', () => map.closePopup());
+  // armClose : le clic droit arme tout de suite la fermeture au tap suivant ; l'appui
+  // long tactile l'arme lui-même au levé du doigt (voir plus bas)
+  function openPlaceMenu(c, armClose = true) {
     const now = Date.now();
     if (now - lastPlaceMenu < 500) return; // un appui long peut déclencher à la fois notre handler et 'contextmenu'
     lastPlaceMenu = now;
@@ -804,37 +807,47 @@ async function init() {
       div.append(b3);
     }
     // closeOnClick/autoClose off : sur mobile, le « clic » de synthèse qui suit la levée
-    // du doigt refermait le menu à peine ouvert. On arme la fermeture au tap suivant,
-    // mais seulement après un court délai pour laisser passer ce clic parasite.
+    // du doigt refermait le menu à peine ouvert. La fermeture au tap suivant est armée
+    // à part, une fois ce clic parasite écarté.
     L.popup({ closeOnClick: false, autoClose: false }).setLatLng(c).setContent(div).openOn(map);
-    setTimeout(() => map.once('click', () => map.closePopup()), 400);
+    if (armClose) setTimeout(armCloseOnTap, 400);
   }
   map.on('contextmenu', e => openPlaceMenu(e.latlng));
 
   // Appui long tactile maison : le 'contextmenu' de Leaflet sur mobile est intermittent
   // (d'autant plus avec le greffon de rotation). On détecte une pression immobile d'un
-  // seul doigt, sans jamais preventDefault (le pan reste intact) ; un déplacement > 12 px
-  // l'annule — c'est un pan, pas un appui long.
+  // seul doigt ; un déplacement > 12 px l'annule — c'est un pan, pas un appui long.
+  // Seul le levé du doigt qui termine un appui long est annulé (preventDefault) : iOS
+  // n'émet alors pas son « clic » de synthèse, qui refermait le menu si le doigt était
+  // resté posé longtemps. Les autres gestes (pan, zoom, tap) restent intacts.
   (function () {
     const el = map.getContainer();
-    let timer = null, sx = 0, sy = 0;
+    let timer = null, fired = false, sx = 0, sy = 0;
     const cancel = () => { clearTimeout(timer); timer = null; };
     el.addEventListener('touchstart', ev => {
       cancel();
+      fired = false;
       if (ev.touches.length !== 1) return; // deux doigts : zoom / rotation
       sx = ev.touches[0].clientX; sy = ev.touches[0].clientY;
       timer = setTimeout(() => {
         timer = null;
+        fired = true;
         if (navigator.vibrate) navigator.vibrate(12); // retour haptique (Android)
-        openPlaceMenu(map.mouseEventToLatLng({ clientX: sx, clientY: sy }));
+        openPlaceMenu(map.mouseEventToLatLng({ clientX: sx, clientY: sy }), false);
       }, 450);
     }, { passive: true });
     el.addEventListener('touchmove', ev => {
       const t = ev.touches[0];
       if (!t || Math.hypot(t.clientX - sx, t.clientY - sy) > 12) cancel();
     }, { passive: true });
-    el.addEventListener('touchend', cancel, { passive: true });
-    el.addEventListener('touchcancel', cancel, { passive: true });
+    el.addEventListener('touchend', ev => {
+      cancel();
+      if (!fired) return;
+      fired = false;
+      ev.preventDefault();             // pas de clic de synthèse sur ce levé-là
+      setTimeout(armCloseOnTap, 0);    // le tap suivant, lui, refermera le menu
+    }, { passive: false });
+    el.addEventListener('touchcancel', () => { cancel(); fired = false; }, { passive: true });
   })();
 
   // données invaders
