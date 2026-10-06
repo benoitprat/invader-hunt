@@ -1,4 +1,4 @@
-const CACHE = 'invader-hunt-2026-10-06.2026';
+const CACHE = 'invader-hunt-2026-10-06.2032';
 const TILE_CACHE = 'tiles-v1';
 const TILE_MAX = 2500; // ~50 Mo de tuiles de carte max
 const ASSETS = [

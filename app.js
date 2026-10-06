@@ -782,35 +782,57 @@ async function init() {
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // poser un départ / une destination : appui long (tactile) ou clic droit (desktop)
-  let lastPlaceMenu = 0;
-  const armCloseOnTap = () => map.once('click', () => map.closePopup());
-  // armClose : le clic droit arme tout de suite la fermeture au tap suivant ; l'appui
-  // long tactile l'arme lui-même au levé du doigt (voir plus bas)
-  function openPlaceMenu(c, armClose = true) {
+  // Menu de placement (départ / destination), ouvert par appui long ou clic droit :
+  //  - il reste ouvert au levé du doigt ;
+  //  - un bouton du menu fait son action et ferme le menu ;
+  //  - un clic n'importe où ailleurs (carte, invader, bouton, panneau) ferme le menu,
+  //    et ce clic garde son effet normal.
+  let lastPlaceMenu = 0, placePopup = null, offOutside = null;
+  function closePlaceMenu() {
+    if (offOutside) { offOutside(); offOutside = null; }
+    if (placePopup) { const p = placePopup; placePopup = null; map.closePopup(p); }
+  }
+  // écoute en phase de capture sur tout le document : rien ne peut l'intercepter avant
+  function armOutsideClose() {
+    if (!placePopup || offOutside) return;
+    const box = placePopup.getElement();
+    const onClick = e => { if (!box || !box.contains(e.target)) closePlaceMenu(); };
+    document.addEventListener('click', onClick, true);
+    offOutside = () => document.removeEventListener('click', onClick, true);
+  }
+  // armNow : le clic droit arme la fermeture tout de suite ; l'appui long tactile
+  // l'arme lui-même au levé du doigt (voir plus bas)
+  function openPlaceMenu(c, armNow = true) {
     const now = Date.now();
     if (now - lastPlaceMenu < 500) return; // un appui long peut déclencher à la fois notre handler et 'contextmenu'
     lastPlaceMenu = now;
+    closePlaceMenu();
+    const act = fn => () => { closePlaceMenu(); fn(); };
     const div = document.createElement('div');
     div.className = 'ctx-popup';
     const b1 = document.createElement('button');
     b1.textContent = '🚩 Départ ici';
-    b1.onclick = () => { map.closePopup(); setStart({ lat: c.lat, lng: c.lng }); };
+    b1.onclick = act(() => setStart({ lat: c.lat, lng: c.lng }));
     const b2 = document.createElement('button');
     b2.textContent = '🎯 Destination ici';
-    b2.onclick = () => { map.closePopup(); setDestination({ lat: c.lat, lng: c.lng }); };
+    b2.onclick = act(() => setDestination({ lat: c.lat, lng: c.lng }));
     div.append(b1, b2);
     if (releveMode()) { // relevé de terrain : désactivé par défaut
       const b3 = document.createElement('button');
       b3.textContent = '👾 Noter un invader ici';
-      b3.onclick = () => showReleveForm(c);
+      b3.onclick = act(() => showReleveForm(c));
       div.append(b3);
     }
-    // closeOnClick/autoClose off : sur mobile, le « clic » de synthèse qui suit la levée
-    // du doigt refermait le menu à peine ouvert. La fermeture au tap suivant est armée
-    // à part, une fois ce clic parasite écarté.
-    L.popup({ closeOnClick: false, autoClose: false }).setLatLng(c).setContent(div).openOn(map);
-    if (armClose) setTimeout(armCloseOnTap, 400);
+    // closeOnClick/autoClose off : la fermeture est entièrement gérée ici
+    const p = L.popup({ closeOnClick: false, autoClose: false }).setLatLng(c).setContent(div);
+    p.on('remove', () => { // fermé par sa croix ou autrement : on retire l'écouteur
+      if (placePopup !== p) return;
+      if (offOutside) { offOutside(); offOutside = null; }
+      placePopup = null;
+    });
+    placePopup = p;
+    p.openOn(map);
+    if (armNow) setTimeout(armOutsideClose, 300); // laisse passer un éventuel clic qui suit le clic droit
   }
   map.on('contextmenu', e => openPlaceMenu(e.latlng));
 
@@ -845,7 +867,7 @@ async function init() {
       if (!fired) return;
       fired = false;
       ev.preventDefault();             // pas de clic de synthèse sur ce levé-là
-      setTimeout(armCloseOnTap, 0);    // le tap suivant, lui, refermera le menu
+      setTimeout(armOutsideClose, 0);  // le clic suivant hors du menu, lui, le refermera
     }, { passive: false });
     el.addEventListener('touchcancel', () => { cancel(); fired = false; }, { passive: true });
   })();
