@@ -21,7 +21,7 @@ PWA personnelle pour chasser les mosaïques de l'artiste **Invader** : elle affi
 - ➕ **Invader** (panneau d'itinéraire) : ajouter une cible à l'itinéraire affiché, en saisissant sa référence (`PA_1234`, `1234`, `pa 1234`) ou depuis la fiche d'un invader sur la carte. La tournée est aussitôt recalculée pour passer au plus court par tous les points — **la distance visée peut donc être dépassée**, l'objectif initial est alors rappelé dans le résumé. Le départ ne bouge pas, l'arrivée non plus quand elle est imposée (destination explicite, ou dernière étape d'une traverse) : le nouveau point s'insère au meilleur endroit du parcours.
 - 📷 : chaque invader (popup et liste d'étapes) pointe vers la recherche Instagram `#PA_<n°>` pour voir des visuels de la mosaïque.
 - 👾 : couches affichées, **filtre de valeur minimale**, et bascule des **couleurs** entre deux modes mémorisés dans le navigateur :
-  - *statut* — violet à flasher, orange endommagé, gris flashé, rouge détruit, noir caché ;
+  - *statut* — violet à flasher, orange endommagé, gris flashé, rouge détruit, noir caché. Option **« mettre en avant les récents »** (30, 90 ou 180 jours) : un anneau doré signale les invaders apparus récemment, un anneau vert ceux réactivés — fragiles, ils risquent de redisparaître. La fiche donne la date (« réactivé le 03/10/2026 »). Les dates viennent de l'historique invader-spotter et de Findvaders, calculées à l'import ;
   - *valeur en points* — échelle chaude du jaune (10 pts) au rouge sombre cerclé d'or (100 pts) pour les cibles, vert clair pour les flashés, noir pour les détruits, gris pour les cachés.
 
 ## Hors ligne

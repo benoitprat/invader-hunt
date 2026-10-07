@@ -53,6 +53,72 @@ def points_of(entry):
         return 0
 
 
+# Premier relevé de l'historique invader-spotter : un instantané de toute la base,
+# pas une date d'apparition.
+INSTANTANE = '2024-10-09'
+MORTS = {'destroyed', 'hidden'}
+
+
+def date_fv(s):
+    """'27/09/26' (Findvaders) -> '2026-09-27', ou '' si absente."""
+    try:
+        j, m, a = s.split('/')
+        return f'20{a}-{m}-{j}'
+    except (AttributeError, ValueError):
+        return ''
+
+
+def derniere_observation(iid, spotter_full, fv):
+    """(date, statut) de la dernière observation datée, si invader-spotter et Findvaders
+    la donnent tous deux et s'accordent sur vivant / disparu ; sinon None."""
+    hist = [h for h in (spotter_full.get(iid) or {}).get('status_history') or [] if h.get('update_date')]
+    f = fv.get(iid) or {}
+    df = date_fv(f.get('LastStatusUpdate'))
+    if not hist or not df:
+        return None
+    h = max(hist, key=lambda h: h['update_date'])
+    sp, sf = statut(h.get('status')), statut(f.get('status'))
+    if (sp in MORTS) != (sf in MORTS):
+        return None
+    return max((h['update_date'], sp), (df, sf))
+
+
+def apparition(iid, spotter, spotter_full, fv, fv_seuls, ov):
+    """(date, réactivé) de la dernière (ré)apparition connue de l'invader, ou (None, False).
+
+    Pose : date_pos d'invader-spotter, sinon première date de l'historique si elle
+    est postérieure à l'instantané initial. Réactivation : dernier passage d'un état
+    mort à OK, à condition que l'invader ait été vu en place avant. Les nouveaux
+    arrivent parfois avec une première entrée « détruit » factice (Stockholm), qui
+    ne doit pas compter comme réactivation."""
+    pose = (spotter.get(iid) or {}).get('date_pos') or None
+    hist = sorted((h for h in (spotter_full.get(iid) or {}).get('status_history') or [] if h.get('update_date')),
+                  key=lambda h: h['update_date'])
+    if not pose and hist and hist[0]['update_date'] > INSTANTANE:
+        pose = hist[0]['update_date']
+    react = None
+    # un invader déjà présent dans l'instantané existait avant : ses réactivations sont réelles
+    vu_en_place = bool(hist) and hist[0]['update_date'] == INSTANTANE and (pose or '') <= INSTANTANE
+    for a, b in zip(hist, hist[1:]):
+        if (a.get('status') or '').lower() not in MORTS:
+            vu_en_place = True
+        if (a.get('status') or '').lower() in MORTS and b.get('status') == 'OK' and vu_en_place:
+            react = b['update_date']
+    # observations de terrain : un « OK » daté est une réactivation constatée sur place,
+    # une position datée sans statut ni date de pose connue vaut date d'apparition
+    if ov and ov.get('date'):
+        if statut(ov.get('status')) == 'OK':
+            react = max(react or '', ov['date'])
+        elif not pose and ov.get('lat') is not None:
+            pose = ov['date']
+    # invaders connus du seul Findvaders : sa date de dernier changement, à défaut
+    if not pose and not react and iid in fv_seuls:
+        pose = date_fv((fv.get(iid) or {}).get('LastStatusUpdate')) or None
+    if react and react >= (pose or ''):
+        return react, True
+    return pose, False
+
+
 def main():
     mi = fetch(SOURCES['mi'])
     spotter = fetch(SOURCES['spotter'])['invaders']
@@ -93,6 +159,7 @@ def main():
     # Findvaders en dernier recours (même priorité que la carte MapInvaders) :
     # seulement les invaders qu'aucune autre source ne localise
     via_fv = 0
+    fv_seuls = set()
     for iid, x in sorted(fv.items()):
         if iid in coords or not x.get('Latitude') or not x.get('Longitude'):
             continue
@@ -107,11 +174,24 @@ def main():
             'arr': None,
         })
         via_fv += 1
+        fv_seuls.add(iid)
     out.sort(key=lambda x: x['id'])
+    # Statut : MapInvaders n'est pas daté et prend parfois des semaines de retard
+    # (réactivations parisiennes de septembre 2026 encore « détruites »). Quand les
+    # deux sources datées, invader-spotter et Findvaders, s'accordent sur une
+    # observation de moins de 90 jours qui contredit MapInvaders, on les suit.
+    recent = time.strftime('%Y-%m-%d', time.localtime(time.time() - 90 * 86400))
+    rattrapes = 0
+    for x in out:
+        obs = derniere_observation(x['id'], spotter_full, fv)
+        if obs and obs[0] >= recent and (obs[1] in MORTS) != (x['status'] in MORTS):
+            x['status'] = obs[1]
+            rattrapes += 1
     # observations de terrain (data/overrides.json) : prioritaires sur les sources.
     # Une entrée peut corriger un invader existant ou en ajouter un que la source
     # ne localise pas encore, si elle porte "lat" et "lng".
     ov_path = ROOT / 'data/overrides.json'
+    overrides = {}
     if ov_path.exists():
         overrides = {k: v for k, v in json.load(open(ov_path)).items() if not k.startswith('_')}
         connus = {x['id'] for x in out}
@@ -151,11 +231,27 @@ def main():
         out.sort(key=lambda x: x['id'])
         print(f'observations de terrain : {corriges} corrigés, {ajoutes} ajoutés')
 
+    # Date de (ré)apparition, pour mettre en avant dans l'app les invaders récents
+    # (« seen », et « react »: 1 si c'est une réactivation). Seulement sur la dernière
+    # année : l'app propose des périodes de 30 à 180 jours, et la base reste légère.
+    limite = time.strftime('%Y-%m-%d', time.localtime(time.time() - 365 * 86400))
+    recents = reactives = 0
+    for x in out:
+        seen, react = apparition(x['id'], spotter, spotter_full, fv, fv_seuls, overrides.get(x['id']))
+        if seen and seen >= limite:
+            x['seen'] = seen
+            if react:
+                x['react'] = 1
+                reactives += 1
+            recents += 1
+    print(f'apparus ou réactivés depuis un an: {recents} (dont {reactives} réactivations)')
+
     json.dump(out, open(ROOT / 'data/invaders.json', 'w'), ensure_ascii=False, separators=(',', ':'))
     pa = [x for x in out if x['city'] == 'PA']
     print(f'total: {len(out)} | PA: {len(pa)} | PA max: {max(int(x["id"].split("_")[1]) for x in pa)}')
     print(f'points comblés via spotter_full / findvaders: {filled}')
     print(f'localisés uniquement par findvaders: {via_fv}')
+    print(f'statuts rattrapés sur les sources datées (< 90 j): {rattrapes}')
     print(f'sans points: {sum(1 for x in out if not x["pts"])} | sans statut: {sum(1 for x in out if not x["status"])}')
 
 

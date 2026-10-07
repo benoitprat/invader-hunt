@@ -73,6 +73,19 @@
     </select>
   </label>
   <div id="value-legend" hidden></div>
+  <label class="sel-row" id="recent-wrap">Mettre en avant les récents
+    <select id="recent-days">
+      <option value="0">non</option>
+      <option value="30">apparus ou réactivés depuis 30 jours</option>
+      <option value="90">… depuis 90 jours</option>
+      <option value="180">… depuis 180 jours</option>
+    </select>
+  </label>
+  <div id="recent-legend" hidden>
+    <span><i class="sw sw-ring" style="border-color:#d97706"></i> Nouveau</span>
+    <span><i class="sw sw-ring" style="border-color:#059669"></i> Réactivé</span>
+    <div id="recent-count"></div>
+  </div>
   <label><input type="checkbox" id="chk-unflashed" checked> <i class="sw" id="sw-todo"></i> 🎯 À flasher</label>
   <label><input type="checkbox" id="chk-flashed" checked> <i class="sw" id="sw-flashed"></i> Déjà flashés</label>
   <label><input type="checkbox" id="chk-destroyed"> <i class="sw" id="sw-dead"></i> 💥 Détruits</label>

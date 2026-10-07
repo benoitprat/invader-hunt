@@ -91,10 +91,17 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 #value-legend div { text-align: center; font-size: 10px; color: #666; }
 #value-legend i { display: block; margin: 0 auto 3px; border-radius: 50%; }
-#min-pts {
+#min-pts, #recent-days {
   display: block; width: 100%; margin-top: 5px; padding: 8px;
   border: 1px solid #ccc; border-radius: 8px; font-size: 15px; background: #fff;
 }
+#recent-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: 13px; color: #333; padding: 4px 2px 8px;
+  border-bottom: 1px solid #eee;
+}
+#recent-count { width: 100%; color: #888; font-size: 12px; }
+.sw-ring { width: 13px; height: 13px; background: #8b5cf6; border-width: 3px; }
 #north-arrow { display: inline-block; transition: transform .12s linear; }
 
 #settings-panel, #rando-panel {
@@ -198,3 +205,4 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 .inv-popup button.alt { background: #f3e8ff; color: #5b21b6; margin-left: 6px; }
 .inv-popup .perso { color: #7c3aed; font-weight: 600; }
+.inv-popup .react { color: #059669; font-weight: 600; }

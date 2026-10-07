@@ -140,6 +140,19 @@ const VALUE_STATUS = {
 
 function colorMode() { return localStorage.getItem('colorMode') === 'value' ? 'value' : 'status'; }
 
+// Mode statut : mise en avant des invaders apparus ou réactivés récemment (champ
+// « seen » de la base, « react » pour une réactivation). Un réactivé a déjà disparu
+// une fois : il risque de redisparaître, autant le flasher vite.
+const RECENT = { new: { color: '#d97706', label: 'Nouveau' }, react: { color: '#059669', label: 'Réactivé' } };
+function recentDays() { const d = +localStorage.getItem('recentDays'); return [30, 90, 180].includes(d) ? d : 0; }
+function recentKind(inv, isFl) {
+  const days = recentDays();
+  if (!days || colorMode() !== 'status' || !inv.seen || isFl || isDead(inv)) return null;
+  if (Date.now() - Date.parse(inv.seen + 'T00:00:00') > days * 86400000) return null;
+  return inv.react ? 'react' : 'new';
+}
+function fmtDate(iso) { const [a, m, j] = iso.split('-'); return `${j}/${m}/${a}`; }
+
 function markerStyle(inv, isFl) {
   if (colorMode() === 'value') {
     if (inv.status === 'hidden') return VALUE_STATUS.hidden;
@@ -152,8 +165,12 @@ function markerStyle(inv, isFl) {
   if (inv.status === 'hidden') return { radius: 5, color: '#000000', fillColor: '#1f2937', fillOpacity: .75, weight: 1.5 };
   if (isDead(inv)) return { radius: 4, color: '#b91c1c', fillColor: '#ef4444', fillOpacity: .5, weight: 1 };
   if (isFl) return { radius: 4, color: '#6b7280', fillColor: '#9ca3af', fillOpacity: .6, weight: 1 };
-  if (isDamaged(inv)) return { radius: 6, color: '#c2410c', fillColor: '#fb923c', fillOpacity: .9, weight: 1.5 };
-  return { radius: 6, color: '#5b21b6', fillColor: '#8b5cf6', fillOpacity: .9, weight: 1.5 };
+  const base = isDamaged(inv)
+    ? { radius: 6, color: '#c2410c', fillColor: '#fb923c', fillOpacity: .9, weight: 1.5 }
+    : { radius: 6, color: '#5b21b6', fillColor: '#8b5cf6', fillOpacity: .9, weight: 1.5 };
+  const kind = recentKind(inv, isFl);
+  // halo : anneau épais de la couleur du type, le remplissage garde le statut
+  return kind ? { ...base, radius: 8, color: RECENT[kind].color, weight: 4, opacity: 1 } : base;
 }
 
 function updateLegend() {
@@ -176,6 +193,16 @@ function updateLegend() {
     leg.dataset.built = '1';
   }
   leg.hidden = !val;
+  // la mise en avant des récents n'existe qu'en mode statut
+  $('recent-wrap').hidden = val;
+  $('recent-legend').hidden = val || !recentDays();
+}
+
+// compte affiché sous la légende : combien d'invaders sont mis en avant
+function updateRecentCount() {
+  const n = { new: 0, react: 0 };
+  for (const inv of invaders) { const k = recentKind(inv, flashed.has(inv.id)); if (k) n[k]++; }
+  $('recent-count').textContent = `${n.new} nouveau${n.new > 1 ? 'x' : ''} · ${n.react} réactivé${n.react > 1 ? 's' : ''} à flasher`;
 }
 function isDead(inv) { return DEAD_STATUSES.has(inv.status); }
 function isDamaged(inv) { return inv.status.includes('damaged'); }
@@ -193,6 +220,9 @@ function invaderPopup(inv) {
   const st = inv.status || 'inconnu';
   const hint = inv.hint ? `<br>💡 ${inv.hint}` : '';
   const perso = inv.perso ? '<br><span class="perso">observé par vous sur place</span>' : '';
+  const apparu = !inv.seen ? ''
+    : inv.react ? `<br><span class="react">♻️ réactivé le ${fmtDate(inv.seen)}</span>${isDead(inv) ? '' : ' — fragile, à flasher vite'}`
+    : `<br>🆕 apparu le ${fmtDate(inv.seen)}`;
   // en mode relevé : signaler ce qu'on constate devant la mosaïque
   const signal = !releveMode() ? ''
     : isDead(inv)
@@ -201,7 +231,7 @@ function invaderPopup(inv) {
   // proposé seulement s'il y a un itinéraire en cours où l'invader ne figure pas déjà
   const ajout = currentTrip && !currentTrip.stops.some(s => s.inv.id === inv.id)
     ? `<button class="alt" onclick="ajouterAuParcours('${inv.id}')">➕ Ajouter au parcours</button>` : '';
-  return `<div class="inv-popup"><b>${inv.id}</b> · ${inv.pts} pts<br>${state} · état : ${st}${hint}${perso}
+  return `<div class="inv-popup"><b>${inv.id}</b> · ${inv.pts} pts<br>${state} · état : ${st}${apparu}${hint}${perso}
     <br><a href="${instaUrl(inv.id)}" target="_blank" rel="noopener">📷 Visuels #${inv.id} sur Instagram</a>
     <button onclick="goToInvader('${inv.id}')">🎯 Y aller</button>${ajout}${signal}</div>`;
 }
@@ -214,10 +244,12 @@ function buildMarkers() {
   layerHidden = L.layerGroup();
   const rend = canvasRenderer();
   const minPts = +$('min-pts').value;
+  const enAvant = []; // dessinés en dernier, donc par-dessus les autres points
   for (const inv of invaders) {
     const isFl = flashed.has(inv.id);
     // le filtre de valeur ne concerne que les cibles restantes
     if (minPts && !isFl && !isDead(inv) && inv.status !== 'hidden' && inv.pts < minPts) continue;
+    if (recentKind(inv, isFl)) { enAvant.push(inv); continue; }
     const layer = inv.status === 'hidden' ? layerHidden
       : isDead(inv) ? layerDestroyed
       : isFl ? layerFlashedGrp
@@ -226,6 +258,12 @@ function buildMarkers() {
       .bindPopup(() => invaderPopup(inv))
       .addTo(layer);
   }
+  for (const inv of enAvant) {
+    L.circleMarker([inv.lat, inv.lng], { ...markerStyle(inv, false), renderer: rend })
+      .bindPopup(() => invaderPopup(inv))
+      .addTo(layerUnflashed);
+  }
+  updateRecentCount();
   if ($('chk-unflashed').checked) layerUnflashed.addTo(map);
   if ($('chk-flashed').checked) layerFlashedGrp.addTo(map);
   if ($('chk-destroyed').checked) layerDestroyed.addTo(map);
@@ -930,6 +968,13 @@ async function init() {
   // sur iOS, un <select> qui garde le focus après le sélecteur natif fait avaler
   // l'appui suivant : on lui retire le focus tout de suite
   $('min-pts').onchange = e => { e.target.blur(); buildMarkers(); };
+  $('recent-days').value = String(recentDays());
+  $('recent-days').onchange = e => {
+    e.target.blur();
+    localStorage.setItem('recentDays', e.target.value);
+    updateLegend();
+    buildMarkers();
+  };
   $('color-mode').value = colorMode();
   $('color-mode').onchange = e => {
     e.target.blur();
