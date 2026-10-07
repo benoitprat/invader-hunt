@@ -109,6 +109,8 @@ Un échec de routage laisse l'itinéraire précédent intact : l'étape n'est re
 
 L'import (`tools/import_mapinvaders.py`) est rejouable et applique les sources dans cet ordre, du moins au plus prioritaire : positions MapInvaders (complétées par Findvaders pour les seuls invaders qu'elles ne localisent pas), points invader-spotter (puis Findvaders en secours), puis **observations de terrain** (`data/overrides.json`). Les états sont normalisés au passage : les sources mélangent `destroyed` et `DESTROYED`, et l'app ne reconnaît que les minuscules.
 
+**Statut : les sources datées priment sur MapInvaders.** MapInvaders ne date pas ses statuts et peut rester faux plus d'un an : en octobre 2026, FTBL_14, PA_235, PA_796 ou FTBL_34, revenus en 2025, y étaient encore « détruits ». Quand invader-spotter (historique daté) et Findvaders (date de dernier changement) s'accordent entre eux — vivant ou disparu — et contredisent MapInvaders, l'import les suit, quel que soit l'âge du constat. Choix fait après que chacun des relevés de terrain de ce type leur a donné raison. Les observations de terrain restent prioritaires sur tout.
+
 Les observations de terrain sont donc appliquées en dernier et **survivent aux rafraîchissements de source**. Une entrée peut corriger un invader existant (statut, position, points) ou en **créer un** que la source ne localise pas encore, si elle porte `lat` et `lng`. Un point laissé à 0 est complété depuis les sources quand elles le connaissent.
 
 À élaguer au fil du temps : quand MapInvaders rattrape une information, l'entrée correspondante devient inutile.

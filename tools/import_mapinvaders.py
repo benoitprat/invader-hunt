@@ -179,15 +179,15 @@ def main():
         via_fv += 1
         fv_seuls.add(iid)
     out.sort(key=lambda x: x['id'])
-    # Statut : MapInvaders n'est pas daté et prend parfois des semaines de retard
-    # (réactivations parisiennes de septembre 2026 encore « détruites »). Quand les
-    # deux sources datées, invader-spotter et Findvaders, s'accordent sur une
-    # observation de moins de 90 jours qui contredit MapInvaders, on les suit.
-    recent = time.strftime('%Y-%m-%d', time.localtime(time.time() - 90 * 86400))
+    # Statut : MapInvaders n'est pas daté et peut rester faux longtemps (FTBL_14,
+    # PA_235, PA_796 revenus en 2025, encore « détruits » chez lui en octobre 2026).
+    # Quand les deux sources datées, invader-spotter et Findvaders, s'accordent entre
+    # elles et le contredisent, on les suit, quel que soit l'âge du constat : les
+    # relevés de terrain leur ont donné raison à chaque vérification.
     rattrapes = 0
     for x in out:
         obs = derniere_observation(x['id'], spotter_full, fv)
-        if obs and obs[0] >= recent and (obs[1] in MORTS) != (x['status'] in MORTS):
+        if obs and (obs[1] in MORTS) != (x['status'] in MORTS):
             x['status'] = obs[1]
             rattrapes += 1
     # observations de terrain (data/overrides.json) : prioritaires sur les sources.
@@ -257,7 +257,7 @@ def main():
     print(f'total: {len(out)} | PA: {len(pa)} | PA max: {max(int(x["id"].split("_")[1]) for x in pa)}')
     print(f'points comblés via spotter_full / findvaders: {filled}')
     print(f'localisés uniquement par findvaders: {via_fv}')
-    print(f'statuts rattrapés sur les sources datées (< 90 j): {rattrapes}')
+    print(f'statuts rattrapés sur les sources datées: {rattrapes}')
     print(f'sans points: {sum(1 for x in out if not x["pts"])} | sans statut: {sum(1 for x in out if not x["status"])}')
 
 
