@@ -83,7 +83,7 @@ def derniere_observation(iid, spotter_full, fv):
     return max((h['update_date'], sp), (df, sf))
 
 
-def apparition(iid, spotter, spotter_full, fv, fv_seuls, ov):
+def apparition(iid, spotter, spotter_full, fv, fv_seuls, ov, mort_avant=False):
     """(date, réactivé) de la dernière (ré)apparition connue de l'invader, ou (None, False).
 
     Pose : date_pos d'invader-spotter, sinon première date de l'historique si elle
@@ -104,11 +104,14 @@ def apparition(iid, spotter, spotter_full, fv, fv_seuls, ov):
             vu_en_place = True
         if (a.get('status') or '').lower() in MORTS and b.get('status') == 'OK' and vu_en_place:
             react = b['update_date']
-    # observations de terrain : un « OK » daté est une réactivation constatée sur place,
-    # une position datée sans statut ni date de pose connue vaut date d'apparition
+    # observations de terrain : un « OK » daté sur un invader que les sources disaient
+    # disparu, sans réactivation connue, est une réactivation constatée sur place. Sinon
+    # c'est une confirmation, qui ne doit pas déplacer la vraie date de réactivation.
+    # Une position datée sans date de pose connue vaut date d'apparition.
     if ov and ov.get('date'):
         if statut(ov.get('status')) == 'OK':
-            react = max(react or '', ov['date'])
+            if not react and mort_avant:
+                react = ov['date']
         elif not pose and ov.get('lat') is not None:
             pose = ov['date']
     # invaders connus du seul Findvaders : sa date de dernier changement, à défaut
@@ -190,6 +193,8 @@ def main():
     # observations de terrain (data/overrides.json) : prioritaires sur les sources.
     # Une entrée peut corriger un invader existant ou en ajouter un que la source
     # ne localise pas encore, si elle porte "lat" et "lng".
+    # statut d'après les sources, avant les relevés de terrain (sert à dater les réactivations)
+    avant = {x['id']: x['status'] for x in out}
     ov_path = ROOT / 'data/overrides.json'
     overrides = {}
     if ov_path.exists():
@@ -237,7 +242,8 @@ def main():
     limite = time.strftime('%Y-%m-%d', time.localtime(time.time() - 365 * 86400))
     recents = reactives = 0
     for x in out:
-        seen, react = apparition(x['id'], spotter, spotter_full, fv, fv_seuls, overrides.get(x['id']))
+        seen, react = apparition(x['id'], spotter, spotter_full, fv, fv_seuls, overrides.get(x['id']),
+                                 avant.get(x['id']) in MORTS)
         if seen and seen >= limite:
             x['seen'] = seen
             if react:
